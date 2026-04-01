@@ -4,6 +4,7 @@
     "slug": "Manga-ar",
     "version": "1.0.0",
     "orientation": "portrait",
+    "newArchEnabled": true,
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "splash": {
@@ -12,7 +13,13 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "$(PRODUCT_NAME) would like to read photos for AR experiences.",
+        "NSPhotoLibraryAddUsageDescription": "Allow $(PRODUCT_NAME) to save photos",
+        "NSCameraUsageDescription": "$(PRODUCT_NAME) uses your camera for AR experiences.",
+        "NSMicrophoneUsageDescription": "$(PRODUCT_NAME) uses your microphone for AR experiences."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -21,8 +28,25 @@
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.Mangaar"
     },
+    "plugins": [
+      [
+        "@reactvision/react-viro",
+        {
+          "android": {
+            "xRMode": "AR"
+          },
+          "ios": {
+            "cameraUsagePermission": "$(PRODUCT_NAME) uses your camera for AR experiences.",
+            "microphoneUsagePermission": "$(PRODUCT_NAME) uses your microphone for AR experiences.",
+            "photosPermission": "$(PRODUCT_NAME) would like to read photos for AR experiences.",
+            "savephotosPermission": "$(PRODUCT_NAME) would like to save photos to your library during AR experiences."
+          }
+        }
+      ]
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }

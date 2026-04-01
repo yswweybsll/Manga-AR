@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Manga AR Studio - 电脑端双端精调</title>
+    <style>
+        body { margin: 0; background: #0b0b0e; color: #e1e1e3; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; }
+        #ui { position: absolute; top: 20px; left: 20px; z-index: 100; background: rgba(18, 18, 22, 0.9); padding: 24px; border-radius: 12px; border: 1px solid #2d2d35; min-width: 280px; backdrop-filter: blur(10px); }
+        h3 { margin-top: 0; color: #7c3aed; letter-spacing: 1px; }
+        .status { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; font-size: 14px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #444; }
+        .dot.connected { background: #10b981; box-shadow: 0 0 12px #10b981; }
+        .input-group { margin-bottom: 12px; }
+        label { display: block; font-size: 11px; color: #888; margin-bottom: 4px; text-transform: uppercase; }
+        input { background: #1a1a20; border: 1px solid #333; color: white; padding: 8px 12px; width: calc(100% - 26px); border-radius: 6px; outline: none; }
+        input:focus { border-color: #7c3aed; }
+        button { background: #7c3aed; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; cursor: pointer; font-weight: bold; transition: all 0.2s; }
+        button:hover { background: #6d28d9; transform: translateY(-1px); }
+        #info { margin-top: 20px; font-size: 12px; color: #666; border-top: 1px solid #2d2d35; paddingTop: 15px; }
+        .hint { font-size: 11px; color: #444; margin-top: 8px; }
+        #ai-btn { background: #db2777; margin-top: 10px; }
+        #ai-btn:hover { background: #be185d; }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <h3>MANGA AR STUDIO</h3>
+        <div class="status">
+            <div id="status-dot" class="dot"></div>
+            <span id="status-text">未连接中继服务</span>
+        </div>
+        <div class="input-group">
+            <label>Relay Server</label>
+            <input id="server-url" value="ws://localhost:3001" placeholder="ws://...">
+        </div>
+        <div class="input-group">
+            <label>Session (Room)</label>
+            <input id="session-id" value="room1">
+        </div>
+        <button id="connect-btn">连接并开始协作</button>
+        
+        <div id="controls-panel" style="display:none">
+            <button id="ai-btn">✨ 渲染并发送至 AI</button>
+            <div class="hint">操作提示：<br>W: 移动 | E: 旋转 | R: 缩放<br>点击物体开始精调</div>
+        </div>
+
+        <div id="info">等待接收 AR 场景数据...</div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+        // ── Three.js 初始化 ──────────────────────────────────
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x0b0b0e);
+        scene.fog = new THREE.Fog(0x0b0b0e, 10, 50);
+        
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.set(3, 3, 3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
+
+        const orbit = new OrbitControls(camera, renderer.domElement);
+        const transform = new TransformControls(camera, renderer.domElement);
+        scene.add(transform);
+
+        // 锁定控制冲突处理
+        transform.addEventListener('dragging-changed', (event) => {
+            orbit.enabled = !event.value;
+            if (!event.value && currentSelectedId) {
+                // 停止拖拽时，同步回手机
+                syncToPhone(currentSelectedId);
+            }
+        });
+
+        // 光照
+        scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+        const spotLight = new THREE.SpotLight(0xffffff, 50);
+        spotLight.position.set(5, 10, 5);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+        // 地板
+        const grid = new THREE.GridHelper(20, 20, 0x2d2d35, 0x1a1a20);
+        scene.add(grid);
+
+        // ── 同步逻辑 ──────────────────────────────────
+        const modelInstances = new Map(); // id -> mesh
+        const rawData = new Map();       // id -> original data
+        let currentSelectedId = null;
+        let ws = null;
+        let sessionId = '';
+
+        function syncToPhone(id) {
+            const mesh = modelInstances.get(id);
+            const original = rawData.get(id);
+            if (!mesh || !ws || ws.readyState !== 1) return;
+
+            // 构建更新消息
+            const msg = {
+                type: 'instance_update',
+                sessionId: sessionId,
+                timestamp: Date.now(),
+                instance: {
+                    ...original,
+                    x: mesh.position.x,
+                    y: mesh.position.y,
+                    z: mesh.position.z,
+                    rotationY: THREE.MathUtils.radToDeg(mesh.rotation.y),
+                    scaleValue: mesh.scale.x
+                }
+            };
+            ws.send(JSON.stringify(msg));
+        }
+
+        // 点击选中
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        window.addEventListener('mousedown', (event) => {
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            
+            const intersects = raycaster.intersectObjects(Array.from(modelInstances.values()));
+            if (intersects.length > 0) {
+                const object = intersects[0].object;
+                transform.attach(object);
+                currentSelectedId = object.userData.id;
+            } else if (!transform.dragging) {
+                transform.detach();
+                currentSelectedId = null;
+            }
+        });
+
+        // 键盘切换模式
+        window.addEventListener('keydown', (event) => {
+            switch (event.key.toLowerCase()) {
+                case 'w': transform.setMode('translate'); break;
+                case 'e': transform.setMode('rotate'); break;
+                case 'r': transform.setMode('scale'); break;
+            }
+        });
+
+        // ── WebSocket 连接 ──────────────────────────────────
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        const infoBox = document.getElementById('info');
+
+        document.getElementById('connect-btn').onclick = () => {
+            const url = document.getElementById('server-url').value;
+            sessionId = document.getElementById('session-id').value;
+            
+            if (ws) ws.close();
+            ws = new WebSocket(`${url}?session=${sessionId}`);
+            
+            ws.onopen = () => {
+                statusDot.className = 'dot connected';
+                statusText.innerText = '协作中';
+                document.getElementById('controls-panel').style.display = 'block';
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                if (data.type === 'scene_snapshot') {
+                    updateScene(data.instances);
+                }
+            };
+        };
+
+        function updateScene(instances) {
+            const currentIds = new Set(instances.map(i => i.instanceId));
+            
+            // 删除
+            for (const [id, mesh] of modelInstances) {
+                if (!currentIds.has(id)) {
+                    if (transform.object === mesh) transform.detach();
+                    scene.remove(mesh);
+                    modelInstances.delete(id);
+                    rawData.delete(id);
+                }
+            }
+
+            // 更新/新建
+            instances.forEach(inst => {
+                let mesh = modelInstances.get(inst.instanceId);
+                if (!mesh) {
+                    const geometry = new THREE.BoxGeometry(0.2, 0.5, 0.2);
+                    const material = new THREE.MeshPhongMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.8 });
+                    mesh = new THREE.Mesh(geometry, material);
+                    mesh.userData.id = inst.instanceId;
+                    scene.add(mesh);
+                    modelInstances.set(inst.instanceId, mesh);
+                }
+                
+                // 如果当前没有在电脑端拖拽这个物体，则同步手机端的位置
+                if (currentSelectedId !== inst.instanceId || !transform.dragging) {
+                    mesh.position.set(inst.x, inst.y, inst.z);
+                    mesh.rotation.y = THREE.MathUtils.degToRad(inst.rotationY);
+                    mesh.scale.setScalar(inst.scaleValue);
+                }
+                rawData.set(inst.instanceId, inst);
+            });
+
+            infoBox.innerText = `手机端实例数: ${instances.length}`;
+        }
+
+        // AI 渲染按钮逻辑
+        document.getElementById('ai-btn').onclick = () => {
+            const dataUrl = renderer.domElement.toDataURL('image/png');
+            console.log("已捕捉场景截图，准备发送至 AI 接口...", dataUrl.substring(0, 50) + "...");
+            alert("场景已渲染！下一步将发送至 Stable Diffusion 进行漫画化。 (详见控制台)");
+        };
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    </script>
+</body>
+</html>
