@@ -19,11 +19,17 @@ import { ViroARSceneNavigator } from '@reactvision/react-viro';
 import { ModelPlacementScene, getSurfaceOffset } from '../scenes/ModelPlacementScene';
 import { cacheModelAsset } from '../services/modelCache';
 import {
+  buildSavedSceneDocument,
+  loadRecentScene,
+  saveRecentScene,
+} from '../services/sceneStorage';
+import {
   createSyncService,
   destroySharedSyncService,
   initSharedSyncService,
 } from '../services/syncService';
 import type { CachedModelAsset, RemoteModel, SceneModelInstance } from '../types/model';
+import type { SavedSceneDocument } from '../types/scene';
 import type { SyncConnectionStatus, SyncMessage, SyncServiceConfig } from '../types/sync';
  
 type ARPlacementScreenProps = {
@@ -64,6 +70,8 @@ export function ARPlacementScreen({
   const [previewType, setPreviewType] = useState<'photo' | 'video' | null>(null);
   const [moveStick, setMoveStick] = useState({ x: 0, y: 0 });
   const [rotateStick, setRotateStick] = useState({ x: 0, y: 0 });
+  const [recentSceneMeta, setRecentSceneMeta] = useState<SavedSceneDocument | null>(null);
+  const [restoringScene, setRestoringScene] = useState(false);
 
   // ── 双端同步状态 ────────────────────────────────────────────────
   const [syncStatus, setSyncStatus] = useState<SyncConnectionStatus>('disconnected');
@@ -106,12 +114,33 @@ export function ARPlacementScreen({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [syncConfig?.serverUrl, syncConfig?.sessionId]);
 
-  // instances 或 selectedInstanceId 变化时推送快照
+  // instances 或 selectedInstanceId 变化时记录最新快照；连接可用时会立即发送，连接恢复后会自动补发
   React.useEffect(() => {
     const svc = syncServiceRef.current;
-    if (!svc || syncStatus !== 'connected') return;
+    if (!svc) return;
     svc.pushSnapshot(instances, selectedInstanceId);
-  }, [instances, selectedInstanceId, syncStatus]);
+  }, [instances, selectedInstanceId]);
+
+  React.useEffect(() => {
+    let active = true;
+
+    void (async () => {
+      try {
+        const recentScene = await loadRecentScene();
+        if (active) {
+          setRecentSceneMeta(recentScene);
+        }
+      } catch {
+        if (active) {
+          setRecentSceneMeta(null);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, []);
   // ────────────────────────────────────────────────────────────────
 
   const selectedInstance = useMemo(
@@ -265,16 +294,17 @@ export function ARPlacementScreen({
   const createSceneInstance = useCallback(
     (
       asset: CachedModelAsset,
-      position: { x: number; z: number; floorY: number }
+      position: { x: number; z: number; floorY: number },
+      overrides?: Partial<Pick<SceneModelInstance, 'instanceId' | 'y' | 'rotationY' | 'scaleValue'>>
     ): SceneModelInstance => {
       return {
-        instanceId: createInstanceId(),
+        instanceId: overrides?.instanceId ?? createInstanceId(),
         asset,
         x: position.x,
         z: position.z,
-        y: position.floorY + getSurfaceOffset(asset),
-        rotationY: 0,
-        scaleValue: asset.defaultScale ?? 1,
+        y: overrides?.y ?? position.floorY + getSurfaceOffset(asset),
+        rotationY: overrides?.rotationY ?? 0,
+        scaleValue: overrides?.scaleValue ?? asset.defaultScale ?? 1,
       };
     },
     [createInstanceId]
@@ -538,6 +568,96 @@ export function ARPlacementScreen({
     setSelectedInstanceIds(fallback ? [fallback] : []);
   }, [instances, multiSelectMode, selectedInstanceId, selectedInstanceIds]);
 
+  const handleSaveScene = useCallback(async () => {
+    if (instances.length === 0) {
+      Alert.alert('当前没有可保存内容', '请先在场景中放置至少一个模型。');
+      return;
+    }
+
+    try {
+      const document = buildSavedSceneDocument(
+        instances,
+        selectedInstanceId,
+        pendingAsset.id
+      );
+      await saveRecentScene(document);
+      setRecentSceneMeta(document);
+      const message = `最近场景已保存，共 ${document.instances.length} 个模型。`;
+      setCaptureMessage(message);
+      Alert.alert('场景已保存', message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '保存场景失败，请稍后重试。';
+      Alert.alert('保存失败', message);
+    }
+  }, [instances, pendingAsset.id, selectedInstanceId]);
+
+  const handleRestoreRecentScene = useCallback(async () => {
+    try {
+      setRestoringScene(true);
+      const savedScene = await loadRecentScene();
+
+      if (!savedScene || savedScene.instances.length === 0) {
+        Alert.alert('没有可恢复的场景', '请先保存一次场景，再尝试恢复。');
+        return;
+      }
+
+      const restoredAssets = { ...cachedAssets };
+      const restoredInstances: SceneModelInstance[] = [];
+
+      for (const savedInstance of savedScene.instances) {
+        const remoteModel = availableModels.find((item) => item.id === savedInstance.modelId);
+        if (!remoteModel) {
+          throw new Error(`模型 ${savedInstance.modelId} 不在当前模型列表中，无法恢复。`);
+        }
+
+        const asset = restoredAssets[remoteModel.id] ?? (await cacheModelAsset(remoteModel));
+        restoredAssets[asset.id] = asset;
+
+        restoredInstances.push(
+          createSceneInstance(
+            asset,
+            {
+              x: savedInstance.x,
+              z: savedInstance.z,
+              floorY: savedInstance.y - getSurfaceOffset(asset),
+            },
+            {
+              instanceId: savedInstance.instanceId,
+              y: savedInstance.y,
+              rotationY: savedInstance.rotationY,
+              scaleValue: savedInstance.scaleValue,
+            }
+          )
+        );
+      }
+
+      const restoredPendingAsset =
+        (savedScene.pendingModelId ? restoredAssets[savedScene.pendingModelId] : null) ??
+        restoredInstances[0]?.asset ??
+        initialModel;
+
+      setCachedAssets(restoredAssets);
+      setInstances(restoredInstances);
+      setSelectedInstanceId(savedScene.selectedInstanceId ?? restoredInstances[0]?.instanceId ?? null);
+      setSelectedInstanceIds(
+        savedScene.selectedInstanceId ? [savedScene.selectedInstanceId] : restoredInstances[0] ? [restoredInstances[0].instanceId] : []
+      );
+      setPendingAsset(restoredPendingAsset);
+      setSceneReady(restoredInstances.length > 0);
+      setMultiSelectMode(false);
+      setShowModelPicker(false);
+      setRecentSceneMeta(savedScene);
+      setPlacementSession((value) => value + 1);
+      setCaptureMessage(`已恢复最近场景，共 ${restoredInstances.length} 个模型。`);
+      Alert.alert('恢复成功', `已恢复最近场景，共 ${restoredInstances.length} 个模型。`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '恢复场景失败，请稍后重试。';
+      Alert.alert('恢复失败', message);
+    } finally {
+      setRestoringScene(false);
+    }
+  }, [availableModels, cachedAssets, createSceneInstance, initialModel]);
+
   const requirePlacedModel = useCallback(() => {
     if (instances.length === 0) {
       Alert.alert('请先放置模型', '先扫描平面并点击放置模型，再进行拍照或录像。');
@@ -785,10 +905,10 @@ export function ARPlacementScreen({
                 syncStatus === 'error' && styles.syncDotError,
               ]} />
               <Text style={styles.syncBadgeText}>
-                {syncStatus === 'connected' ? '已同步'
-                  : syncStatus === 'connecting' ? '连接中…'
-                  : syncStatus === 'error' ? '同步错误'
-                  : '未连接'}
+                {syncStatus === 'connected' ? 'PC 可连接'
+                  : syncStatus === 'connecting' ? '等待 PC/中继…'
+                  : syncStatus === 'error' ? '离线可用'
+                  : '离线可用'}
               </Text>
             </View>
           ) : null}
@@ -962,6 +1082,13 @@ export function ARPlacementScreen({
               {captureMessage ? (
                 <Text style={styles.captureText}>{captureMessage}</Text>
               ) : null}
+              {recentSceneMeta ? (
+                <Text style={styles.metricText}>
+                  最近保存：{new Date(recentSceneMeta.updatedAt).toLocaleString()}
+                </Text>
+              ) : (
+                <Text style={styles.metricText}>最近保存：暂无</Text>
+              )}
             </>
           ) : null}
 
@@ -1025,6 +1152,23 @@ export function ARPlacementScreen({
                 </ScrollView>
               </View>
             ) : null}
+
+            <View style={styles.actions}>
+              <Pressable onPress={handleSaveScene} style={styles.secondaryAction}>
+                <Text style={styles.secondaryActionText}>保存最近场景</Text>
+              </Pressable>
+              <Pressable
+                disabled={restoringScene}
+                onPress={() => void handleRestoreRecentScene()}
+                style={[styles.secondaryAction, restoringScene ? styles.buttonDisabled : null]}
+              >
+                {restoringScene ? (
+                  <ActivityIndicator color="#ffffff" />
+                ) : (
+                  <Text style={styles.secondaryActionText}>恢复最近场景</Text>
+                )}
+              </Pressable>
+            </View>
 
             <View style={styles.actions}>
               <Pressable onPress={() => adjustRotation(-15)} style={styles.secondaryAction}>

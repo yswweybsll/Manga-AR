@@ -111,6 +111,10 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
   let shouldReconnect = true;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   let pingTimer: ReturnType<typeof setTimeout> | null = null;
+  let latestSnapshot: {
+    instances: SceneModelInstance[];
+    selectedInstanceId: string | null;
+  } | null = null;
 
   // 版本号 map：instanceId → syncVersion
   const versionMap = new Map<string, number>();
@@ -135,6 +139,31 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
         // 发送失败静默忽略，下一次推送会重试
       }
     }
+  }
+
+  function buildSnapshotMessage(
+    instances: SceneModelInstance[],
+    selectedInstanceId: string | null
+  ): SceneSnapshotMessage {
+    instances.forEach((inst) => {
+      versionMap.set(
+        inst.instanceId,
+        (versionMap.get(inst.instanceId) ?? 0) + 1
+      );
+    });
+
+    return {
+      type: 'scene_snapshot',
+      sessionId,
+      timestamp: Date.now(),
+      instances: instances.map((inst) => toSyncInstance(inst, versionMap)),
+      selectedInstanceId,
+    };
+  }
+
+  function flushLatestSnapshot() {
+    if (!latestSnapshot) return;
+    send(buildSnapshotMessage(latestSnapshot.instances, latestSnapshot.selectedInstanceId));
   }
 
   // ── 心跳 ──────────────────────────────────
@@ -189,6 +218,7 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
     ws.onopen = () => {
       setStatus('connected');
       startPing();
+      flushLatestSnapshot();
     };
 
     ws.onclose = () => {
@@ -215,23 +245,7 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
   // ── 节流版 pushSnapshot ───────────────────
   const throttledPush = throttle(
     (instances: SceneModelInstance[], selectedInstanceId: string | null) => {
-      // 每次推送前递增有变化的实例版本号
-      instances.forEach((inst) => {
-        versionMap.set(
-          inst.instanceId,
-          (versionMap.get(inst.instanceId) ?? 0) + 1
-        );
-      });
-
-      const msg: SceneSnapshotMessage = {
-        type: 'scene_snapshot',
-        sessionId,
-        timestamp: Date.now(),
-        instances: instances.map((inst) => toSyncInstance(inst, versionMap)),
-        selectedInstanceId,
-      };
-
-      send(msg);
+      send(buildSnapshotMessage(instances, selectedInstanceId));
     },
     snapshotThrottleMs
   );
@@ -264,7 +278,13 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
     },
 
     pushSnapshot(instances, selectedInstanceId) {
-      throttledPush(instances, selectedInstanceId);
+      latestSnapshot = {
+        instances: instances.map((inst) => ({ ...inst })),
+        selectedInstanceId,
+      };
+      if (status === 'connected') {
+        throttledPush(instances, selectedInstanceId);
+      }
     },
 
     onMessage(handler) {
