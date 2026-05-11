@@ -1,12 +1,18 @@
 import type { RemoteModel } from '../types/model';
 
-// 还没有真实后端时，先用公开 GLB 样例打通首阶段流程。
+const GLTF_SAMPLE_ASSETS_BASE_URL =
+  'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models';
+
+function glbModelUrl(modelName: string) {
+  return `${GLTF_SAMPLE_ASSETS_BASE_URL}/${modelName}/glTF-Binary/${modelName}.glb`;
+}
+
+// 当前阶段使用 Khronos glTF Sample Assets 的公开 GLB 样例。
 export const mockModels: RemoteModel[] = [
   {
     id: 'duck-demo',
-    name: 'Duck Demo',
-    modelUrl:
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/Duck/glTF-Binary/Duck.glb',
+    name: '小黄鸭',
+    modelUrl: glbModelUrl('Duck'),
     format: 'GLB',
     defaultScale: 0.02,
     width: 0.4,
@@ -16,14 +22,141 @@ export const mockModels: RemoteModel[] = [
   },
   {
     id: 'toy-car-demo',
-    name: 'Toy Car Demo',
-    modelUrl:
-      'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Assets/main/Models/ToyCar/glTF-Binary/ToyCar.glb',
+    name: '玩具车',
+    modelUrl: glbModelUrl('ToyCar'),
     format: 'GLB',
     defaultScale: 0.3,
     width: 0.8,
     height: 0.35,
     depth: 1.3,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'avocado-demo',
+    name: '牛油果',
+    modelUrl: glbModelUrl('Avocado'),
+    format: 'GLB',
+    defaultScale: 4,
+    surfaceOffset: 0.04,
+  },
+  {
+    id: 'boombox-demo',
+    name: '复古音响',
+    modelUrl: glbModelUrl('BoomBox'),
+    format: 'GLB',
+    defaultScale: 45,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'antique-camera-demo',
+    name: '复古相机',
+    modelUrl: glbModelUrl('AntiqueCamera'),
+    format: 'GLB',
+    defaultScale: 0.35,
+    surfaceOffset: 0.1,
+  },
+  {
+    id: 'barramundi-fish-demo',
+    name: '澳洲肺鱼',
+    modelUrl: glbModelUrl('BarramundiFish'),
+    format: 'GLB',
+    defaultScale: 0.35,
+    surfaceOffset: 0.08,
+  },
+  {
+    id: 'damaged-helmet-demo',
+    name: '破损头盔',
+    modelUrl: glbModelUrl('DamagedHelmet'),
+    format: 'GLB',
+    defaultScale: 0.35,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'flight-helmet-demo',
+    name: '飞行头盔',
+    modelUrl: glbModelUrl('FlightHelmet'),
+    format: 'GLB',
+    defaultScale: 0.35,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'lantern-demo',
+    name: '灯笼',
+    modelUrl: glbModelUrl('Lantern'),
+    format: 'GLB',
+    defaultScale: 0.18,
+    surfaceOffset: 0.1,
+  },
+  {
+    id: 'water-bottle-demo',
+    name: '水瓶',
+    modelUrl: glbModelUrl('WaterBottle'),
+    format: 'GLB',
+    defaultScale: 1.2,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'chair-demo',
+    name: '紫金椅子',
+    modelUrl: glbModelUrl('ChairDamaskPurplegold'),
+    format: 'GLB',
+    defaultScale: 0.45,
+    surfaceOffset: 0.18,
+  },
+  {
+    id: 'sofa-demo',
+    name: '天鹅绒沙发',
+    modelUrl: glbModelUrl('GlamVelvetSofa'),
+    format: 'GLB',
+    defaultScale: 0.35,
+    surfaceOffset: 0.18,
+  },
+  {
+    id: 'watch-demo',
+    name: '计时腕表',
+    modelUrl: glbModelUrl('ChronographWatch'),
+    format: 'GLB',
+    defaultScale: 0.25,
+    surfaceOffset: 0.06,
+  },
+  {
+    id: 'shoe-demo',
+    name: '运动鞋',
+    modelUrl: glbModelUrl('MaterialsVariantsShoe'),
+    format: 'GLB',
+    defaultScale: 0.45,
+    surfaceOffset: 0.08,
+  },
+  {
+    id: 'fox-demo',
+    name: '狐狸',
+    modelUrl: glbModelUrl('Fox'),
+    format: 'GLB',
+    defaultScale: 0.025,
+    surfaceOffset: 0.06,
+  },
+  {
+    id: 'cesium-man-demo',
+    name: '赛西姆人',
+    modelUrl: glbModelUrl('CesiumMan'),
+    format: 'GLB',
+    defaultScale: 0.45,
+    surfaceOffset: 0.2,
+  },
+  {
+    id: 'milk-truck-demo',
+    name: '牛奶卡车',
+    modelUrl: glbModelUrl('CesiumMilkTruck'),
+    format: 'GLB',
+    defaultScale: 0.28,
+    surfaceOffset: 0.12,
+  },
+  {
+    id: 'sci-fi-helmet-demo',
+    name: '科幻头盔',
+    modelUrl: glbModelUrl('SciFiHelmet'),
+    format: 'GLB',
+    defaultScale: 0.35,
     surfaceOffset: 0.12,
   },
 ];

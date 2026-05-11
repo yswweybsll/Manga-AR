@@ -20,6 +20,8 @@
         .hint { font-size: 11px; color: #444; margin-top: 8px; }
         #ai-btn { background: #db2777; margin-top: 10px; }
         #ai-btn:hover { background: #be185d; }
+        #focus-btn { margin-top: 10px; background: #2563eb; }
+        #focus-btn:hover { background: #1d4ed8; }
     </style>
 </head>
 <body>
@@ -40,6 +42,7 @@
         <button id="connect-btn">连接并开始协作</button>
         
         <div id="controls-panel" style="display:none">
+            <button id="focus-btn">聚焦手机场景</button>
             <button id="ai-btn">✨ 渲染并发送至 AI</button>
             <div class="hint">操作提示：<br>W: 移动 | E: 旋转 | R: 缩放<br>点击物体开始精调</div>
         </div>
@@ -104,6 +107,30 @@
         let currentSelectedId = null;
         let ws = null;
         let sessionId = '';
+        let hasAutoFocusedScene = false;
+
+        function getProxyScale(inst) {
+            const sourceScale = Number(inst.scaleValue || 1);
+            return Math.max(0.35, sourceScale);
+        }
+
+        function focusScene() {
+            if (modelInstances.size === 0) return;
+
+            const box = new THREE.Box3();
+            modelInstances.forEach((mesh) => box.expandByObject(mesh));
+
+            const center = new THREE.Vector3();
+            const size = new THREE.Vector3();
+            box.getCenter(center);
+            box.getSize(size);
+
+            const radius = Math.max(size.x, size.y, size.z, 1);
+            camera.position.set(center.x + radius * 1.8, center.y + radius * 1.4, center.z + radius * 1.8);
+            camera.lookAt(center);
+            orbit.target.copy(center);
+            orbit.update();
+        }
 
         function syncToPhone(id) {
             const mesh = modelInstances.get(id);
@@ -121,7 +148,7 @@
                     y: mesh.position.y,
                     z: mesh.position.z,
                     rotationY: THREE.MathUtils.radToDeg(mesh.rotation.y),
-                    scaleValue: mesh.scale.x
+                    scaleValue: original.scaleValue
                 }
             };
             ws.send(JSON.stringify(msg));
@@ -198,10 +225,23 @@
             instances.forEach(inst => {
                 let mesh = modelInstances.get(inst.instanceId);
                 if (!mesh) {
-                    const geometry = new THREE.BoxGeometry(0.2, 0.5, 0.2);
-                    const material = new THREE.MeshPhongMaterial({ color: 0x7c3aed, transparent: true, opacity: 0.8 });
+                    const geometry = new THREE.BoxGeometry(0.8, 1.2, 0.8);
+                    const material = new THREE.MeshPhongMaterial({
+                        color: 0x7c3aed,
+                        emissive: 0x2e1065,
+                        transparent: true,
+                        opacity: 0.88
+                    });
                     mesh = new THREE.Mesh(geometry, material);
                     mesh.userData.id = inst.instanceId;
+
+                    const edges = new THREE.EdgesGeometry(geometry);
+                    const outline = new THREE.LineSegments(
+                        edges,
+                        new THREE.LineBasicMaterial({ color: 0xffffff })
+                    );
+                    mesh.add(outline);
+
                     scene.add(mesh);
                     modelInstances.set(inst.instanceId, mesh);
                 }
@@ -210,13 +250,22 @@
                 if (currentSelectedId !== inst.instanceId || !transform.dragging) {
                     mesh.position.set(inst.x, inst.y, inst.z);
                     mesh.rotation.y = THREE.MathUtils.degToRad(inst.rotationY);
-                    mesh.scale.setScalar(inst.scaleValue);
+                    mesh.scale.setScalar(getProxyScale(inst));
                 }
                 rawData.set(inst.instanceId, inst);
             });
 
             infoBox.innerText = `手机端实例数: ${instances.length}`;
+
+            if (instances.length > 0 && !hasAutoFocusedScene) {
+                focusScene();
+                hasAutoFocusedScene = true;
+            }
         }
+
+        document.getElementById('focus-btn').onclick = () => {
+            focusScene();
+        };
 
         // AI 渲染按钮逻辑
         document.getElementById('ai-btn').onclick = () => {

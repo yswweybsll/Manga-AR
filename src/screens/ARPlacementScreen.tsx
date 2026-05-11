@@ -10,6 +10,7 @@ import {
   Pressable,
   SafeAreaView,
   ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   View,
@@ -47,6 +48,7 @@ export function ARPlacementScreen({
   onBack,
   syncConfig,
 }: ARPlacementScreenProps) {
+  const topSafeOffset = (StatusBar.currentHeight ?? 0) + 12;
   const arNavigatorRef = useRef<ViroARSceneNavigator | null>(null);
   const aimWorldRef = useRef<[number, number, number] | null>(null);
   const cameraForwardRef = useRef<[number, number, number]>([0, 0, -1]);
@@ -63,6 +65,8 @@ export function ARPlacementScreen({
   const [isRecording, setIsRecording] = useState(false);
   const [captureMessage, setCaptureMessage] = useState<string | null>(null);
   const [panelCollapsed, setPanelCollapsed] = useState(false);
+  const [topPanelCollapsed, setTopPanelCollapsed] = useState(false);
+  const [sensitivityCollapsedSide, setSensitivityCollapsedSide] = useState<'left' | 'right' | null>(null);
   const [multiSelectMode, setMultiSelectMode] = useState(false);
   const [selectedInstanceIds, setSelectedInstanceIds] = useState<string[]>([]);
   const [previewVisible, setPreviewVisible] = useState(false);
@@ -885,48 +889,65 @@ export function ARPlacementScreen({
       />
 
       <SafeAreaView pointerEvents="box-none" style={styles.overlay}>
-        <View style={styles.topBar}>
-          <Pressable onPress={onBack} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>返回模型库</Text>
+        <View
+          style={[
+            styles.topPanel,
+            { marginTop: topSafeOffset },
+            topPanelCollapsed ? styles.topPanelCollapsed : null,
+          ]}
+        >
+          <Pressable
+            onPress={() => setTopPanelCollapsed((value) => !value)}
+            style={styles.topPanelHandle}
+          >
+            <Text style={styles.topPanelHandleText}>
+              {topPanelCollapsed ? '展开顶部面板 ▼' : '收起顶部面板 ▲'}
+            </Text>
           </Pressable>
 
-          {/* 同步状态指示器：仅在传入 syncConfig 时显示 */}
-          {syncConfig ? (
-            <View style={[
-              styles.syncBadge,
-              syncStatus === 'connected' && styles.syncBadgeConnected,
-              syncStatus === 'connecting' && styles.syncBadgeConnecting,
-              syncStatus === 'error' && styles.syncBadgeError,
-            ]}>
-              <View style={[
-                styles.syncDot,
-                syncStatus === 'connected' && styles.syncDotConnected,
-                syncStatus === 'connecting' && styles.syncDotConnecting,
-                syncStatus === 'error' && styles.syncDotError,
-              ]} />
-              <Text style={styles.syncBadgeText}>
-                {syncStatus === 'connected' ? 'PC 可连接'
-                  : syncStatus === 'connecting' ? '等待 PC/中继…'
-                  : syncStatus === 'error' ? '离线可用'
-                  : '离线可用'}
-              </Text>
-            </View>
-          ) : null}
+          {!topPanelCollapsed ? (
+            <View style={styles.topPanelContent}>
+              <View style={styles.topPanelRow}>
+                <Pressable onPress={onBack} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>返回模型库</Text>
+                </Pressable>
 
-          {/* 实例计数 Badge */}
-          {instances.length > 0 ? (
-            <View style={styles.countBadge}>
-              <Text style={styles.countBadgeText}>
-                {selectedInstanceId
-                  ? `${instances.findIndex((i) => i.instanceId === selectedInstanceId) + 1} / ${instances.length}`
-                  : `共 ${instances.length} 个`}
-              </Text>
-              <View style={styles.countBadgeDot} />
+                {/* 同步状态指示器：仅在传入 syncConfig 时显示 */}
+                {syncConfig ? (
+                  <View style={[
+                    styles.syncBadge,
+                    syncStatus === 'connected' && styles.syncBadgeConnected,
+                    syncStatus === 'connecting' && styles.syncBadgeConnecting,
+                    syncStatus === 'error' && styles.syncBadgeError,
+                  ]}>
+                    <View style={[
+                      styles.syncDot,
+                      syncStatus === 'connected' && styles.syncDotConnected,
+                      syncStatus === 'connecting' && styles.syncDotConnecting,
+                      syncStatus === 'error' && styles.syncDotError,
+                    ]} />
+                    <Text style={styles.syncBadgeText}>
+                      {syncStatus === 'connected' ? 'PC 可连接'
+                        : syncStatus === 'connecting' ? '等待 PC/中继…'
+                        : syncStatus === 'error' ? '离线可用'
+                        : '离线可用'}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.syncBadge}>
+                    <View style={styles.syncDot} />
+                    <Text style={styles.syncBadgeText}>未配置 PC 连接</Text>
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.topPanelRow}>
+                <Pressable onPress={handlePlaceAtAim} style={styles.placeAimButton}>
+                  <Text style={styles.placeAimButtonText}>放置到准星</Text>
+                </Pressable>
+              </View>
             </View>
           ) : null}
-          <Pressable onPress={handlePlaceAtAim} style={styles.placeAimButton}>
-            <Text style={styles.placeAimButtonText}>放置到准星</Text>
-          </Pressable>
         </View>
 
         {/* 实例快捷切换栏 */}
@@ -1017,30 +1038,66 @@ export function ARPlacementScreen({
           </View>
         </View>
 
-        <View style={styles.joystickTunePanel}>
-          <View style={styles.joystickTuneRow}>
-            <Text style={styles.joystickTuneLabel}>移动灵敏度 {joystickMoveSpeed.toFixed(3)}</Text>
-            <View style={styles.joystickTuneButtons}>
-              <Pressable onPress={() => tuneMoveSpeed(-0.005)} style={styles.joystickTuneButton}>
-                <Text style={styles.joystickTuneButtonText}>-</Text>
-              </Pressable>
-              <Pressable onPress={() => tuneMoveSpeed(0.005)} style={styles.joystickTuneButton}>
-                <Text style={styles.joystickTuneButtonText}>+</Text>
-              </Pressable>
-            </View>
-          </View>
+        <View
+          style={[
+            styles.joystickTuneShell,
+            sensitivityCollapsedSide === 'left' ? styles.joystickTuneShellLeftCollapsed : null,
+            sensitivityCollapsedSide === 'right' ? styles.joystickTuneShellRightCollapsed : null,
+          ]}
+          pointerEvents="box-none"
+        >
+          {sensitivityCollapsedSide === null ? (
+            <View style={styles.joystickTunePanel}>
+              <View style={styles.joystickTuneHeader}>
+                <Pressable
+                  onPress={() => setSensitivityCollapsedSide('left')}
+                  style={styles.joystickTuneFoldButton}
+                >
+                  <Text style={styles.joystickTuneFoldButtonText}>向左收起</Text>
+                </Pressable>
+                <Text style={styles.joystickTuneTitle}>灵敏度控制</Text>
+                <Pressable
+                  onPress={() => setSensitivityCollapsedSide('right')}
+                  style={styles.joystickTuneFoldButton}
+                >
+                  <Text style={styles.joystickTuneFoldButtonText}>向右收起</Text>
+                </Pressable>
+              </View>
 
-          <View style={styles.joystickTuneRow}>
-            <Text style={styles.joystickTuneLabel}>旋转灵敏度 {joystickRotateSpeed.toFixed(1)}</Text>
-            <View style={styles.joystickTuneButtons}>
-              <Pressable onPress={() => tuneRotateSpeed(-0.5)} style={styles.joystickTuneButton}>
-                <Text style={styles.joystickTuneButtonText}>-</Text>
-              </Pressable>
-              <Pressable onPress={() => tuneRotateSpeed(0.5)} style={styles.joystickTuneButton}>
-                <Text style={styles.joystickTuneButtonText}>+</Text>
-              </Pressable>
+              <View style={styles.joystickTuneRow}>
+                <Text style={styles.joystickTuneLabel}>移动灵敏度 {joystickMoveSpeed.toFixed(3)}</Text>
+                <View style={styles.joystickTuneButtons}>
+                  <Pressable onPress={() => tuneMoveSpeed(-0.005)} style={styles.joystickTuneButton}>
+                    <Text style={styles.joystickTuneButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => tuneMoveSpeed(0.005)} style={styles.joystickTuneButton}>
+                    <Text style={styles.joystickTuneButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
+
+              <View style={styles.joystickTuneRow}>
+                <Text style={styles.joystickTuneLabel}>旋转灵敏度 {joystickRotateSpeed.toFixed(1)}</Text>
+                <View style={styles.joystickTuneButtons}>
+                  <Pressable onPress={() => tuneRotateSpeed(-0.5)} style={styles.joystickTuneButton}>
+                    <Text style={styles.joystickTuneButtonText}>-</Text>
+                  </Pressable>
+                  <Pressable onPress={() => tuneRotateSpeed(0.5)} style={styles.joystickTuneButton}>
+                    <Text style={styles.joystickTuneButtonText}>+</Text>
+                  </Pressable>
+                </View>
+              </View>
             </View>
-          </View>
+          ) : (
+            <Pressable
+              onPress={() => setSensitivityCollapsedSide(null)}
+              style={styles.joystickTuneCollapsedTab}
+            >
+              <Text style={styles.joystickTuneCollapsedText}>
+                {sensitivityCollapsedSide === 'left' ? '灵敏度 ▶' : '◀ 灵敏度'}
+              </Text>
+            </Pressable>
+          )}
         </View>
 
         <View style={styles.bottomPanel}>
@@ -1055,7 +1112,12 @@ export function ARPlacementScreen({
           </Pressable>
 
           {!panelCollapsed ? (
-            <>
+            <ScrollView
+              style={styles.bottomPanelScroll}
+              contentContainerStyle={styles.bottomPanelScrollContent}
+              nestedScrollEnabled
+              showsVerticalScrollIndicator
+            >
               <Text style={styles.helperText}>
                 {sceneReady
                   ? '移动摇杆时以当前摄像头朝向为「前后左右」。点击模型可选中并拖动；「放置到准星」可移动选中模型到准星处。'
@@ -1089,10 +1151,8 @@ export function ARPlacementScreen({
               ) : (
                 <Text style={styles.metricText}>最近保存：暂无</Text>
               )}
-            </>
-          ) : null}
 
-          {!panelCollapsed ? <View style={styles.actionsColumn}>
+              <View style={styles.actionsColumn}>
             <View style={styles.actions}>
               <Pressable onPress={handleToggleMultiSelectMode} style={styles.secondaryAction}>
                 <Text style={styles.secondaryActionText}>
@@ -1220,7 +1280,9 @@ export function ARPlacementScreen({
                 <Text style={styles.primaryButtonText}>重置整个场景</Text>
               </Pressable>
             </View>
-          </View> : null}
+          </View>
+            </ScrollView>
+          ) : null}
         </View>
       </SafeAreaView>
 
@@ -1270,18 +1332,53 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'space-between',
   },
-  topBar: {
+  topPanel: {
+    marginHorizontal: 16,
+    borderRadius: 18,
+    backgroundColor: 'rgba(9, 9, 11, 0.84)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    overflow: 'hidden',
+  },
+  topPanelCollapsed: {
+    alignSelf: 'center',
+  },
+  topPanelHandle: {
+    minHeight: 44,
     paddingHorizontal: 16,
-    paddingTop: 8,
-    alignItems: 'flex-start',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(24, 24, 27, 0.72)',
+  },
+  topPanelHandleText: {
+    color: '#d4d4d8',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  topPanelContent: {
+    padding: 12,
+    gap: 10,
+  },
+  topPanelRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 10,
   },
   bottomPanel: {
     margin: 16,
     padding: 16,
+    maxHeight: '42%',
     borderRadius: 20,
     backgroundColor: 'rgba(9, 9, 11, 0.84)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
+  },
+  bottomPanelScroll: {
+    marginTop: 8,
+  },
+  bottomPanelScrollContent: {
+    paddingBottom: 18,
   },
   panelHeader: {
     flexDirection: 'row',
@@ -1382,6 +1479,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#3f3f46',
   },
+  buttonDisabled: {
+    opacity: 0.55,
+  },
   secondaryActionText: {
     color: '#ffffff',
     fontSize: 13,
@@ -1399,7 +1499,6 @@ const styles = StyleSheet.create({
     borderColor: '#ef4444',
   },
   placeAimButton: {
-    marginTop: 10,
     minHeight: 40,
     paddingHorizontal: 16,
     borderRadius: 999,
@@ -1408,7 +1507,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#16a34a',
     borderWidth: 1,
     borderColor: '#22c55e',
-    alignSelf: 'flex-start',
   },
   placeAimButtonText: {
     color: '#ffffff',
@@ -1551,15 +1649,66 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 10,
   },
-  joystickTunePanel: {
+  joystickTuneShell: {
     marginHorizontal: 16,
     marginBottom: 10,
+  },
+  joystickTuneShellLeftCollapsed: {
+    alignItems: 'flex-start',
+  },
+  joystickTuneShellRightCollapsed: {
+    alignItems: 'flex-end',
+  },
+  joystickTunePanel: {
     padding: 10,
     borderRadius: 12,
     backgroundColor: 'rgba(9, 9, 11, 0.78)',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.12)',
     gap: 8,
+  },
+  joystickTuneHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  joystickTuneTitle: {
+    flex: 1,
+    textAlign: 'center',
+    color: '#fafafa',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  joystickTuneFoldButton: {
+    minHeight: 26,
+    paddingHorizontal: 10,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#27272a',
+    borderWidth: 1,
+    borderColor: '#3f3f46',
+  },
+  joystickTuneFoldButtonText: {
+    color: '#d4d4d8',
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  joystickTuneCollapsedTab: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(9, 9, 11, 0.82)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.14)',
+  },
+  joystickTuneCollapsedText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '800',
   },
   joystickTuneRow: {
     flexDirection: 'row',

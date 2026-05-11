@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Gradle user home when set to project dir (local build cache — do not commit)
+.gradle-cache/

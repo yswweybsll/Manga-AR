@@ -5,6 +5,8 @@
   "scripts": {
     "start": "expo start --dev-client",
     "android": "expo run:android",
+    "android:release": "cd android && gradlew.bat assembleRelease",
+    "android:install-release": "cd android && gradlew.bat installRelease",
     "ios": "expo run:ios",
     "web": "expo start --web",
     "prebuild": "expo prebuild --clean",
