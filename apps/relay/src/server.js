@@ -12,7 +12,7 @@ const os = require('os');
 const path = require('path');
 
 const PORT = process.env.PORT || 3001;
-const STUDIO_HTML_PATH = path.resolve(__dirname, '../manga-ar-studio/index.html');
+const STUDIO_HTML_PATH = path.resolve(__dirname, '../../studio-desktop/prototype/index.html');
 
 function getLocalIPv4Addresses() {
   const interfaces = os.networkInterfaces();
