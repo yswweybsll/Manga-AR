@@ -1,22 +1,22 @@
-/**
- * relay-server/index.js
- * AR + AI 同步中继服务器
- *
- * 职责：接收来自手机端的场景数据，并广播给所有连接的电脑端（或其它手机）。
- */
+import fs from 'node:fs';
+import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { WebSocket, WebSocketServer } from 'ws';
+import type { SceneSnapshotMessage, SyncMessage } from '@manga-ar/shared';
 
-const { WebSocketServer } = require('ws');
-const http = require('http');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
+import { joinRoom, leaveRoom } from './rooms.js';
+import { getSnapshot, rememberSnapshot } from './snapshotStore.js';
 
-const PORT = process.env.PORT || 3001;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PORT = Number(process.env.PORT || 3001);
 const STUDIO_HTML_PATH = path.resolve(__dirname, '../../studio-desktop/prototype/index.html');
 
-function getLocalIPv4Addresses() {
+function getLocalIPv4Addresses(): string[] {
   const interfaces = os.networkInterfaces();
-  const addresses = [];
+  const addresses: string[] = [];
 
   Object.values(interfaces).forEach((items) => {
     items?.forEach((item) => {
@@ -29,16 +29,16 @@ function getLocalIPv4Addresses() {
   return addresses;
 }
 
-function sendText(res, statusCode, body, contentType = 'text/plain; charset=utf-8') {
+function sendText(res: http.ServerResponse, statusCode: number, body: string, contentType = 'text/plain; charset=utf-8'): void {
   res.writeHead(statusCode, { 'Content-Type': contentType });
   res.end(body);
 }
 
 const server = http.createServer((req, res) => {
-  const url = new URL(req.url || '/', `http://${req.headers.host || `localhost:${PORT}`}`);
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? `localhost:${PORT}`}`);
 
   if (url.pathname === '/' || url.pathname === '/index.html') {
-    const host = req.headers.host || `localhost:${PORT}`;
+    const host = req.headers.host ?? `localhost:${PORT}`;
     const studioUrl = `http://${host}/studio`;
     const wsUrl = `ws://${host}`;
 
@@ -87,65 +87,46 @@ const server = http.createServer((req, res) => {
 
   sendText(res, 404, 'Not Found');
 });
+
 const wss = new WebSocketServer({ server });
-
-// 房间管理：Map<sessionId, Set<WebSocket>>
-const rooms = new Map();
-
-// 场景快照缓存：Map<sessionId, lastSnapshot>
-// 保证电脑端新接入时能立即看到当前场景，而不是等下一次推送
-const snapshots = new Map();
 
 console.log(`[Relay] 正在启动 WebSocket 中继服务器，端口: ${PORT}...`);
 
 wss.on('connection', (ws, req) => {
-  // 从 URL 参数获取 sessionId，例如 ws://localhost:3001?session=room123
-  const params = new URLSearchParams(req.url.split('?')[1]);
+  const params = new URLSearchParams(req.url?.split('?')[1]);
   const sessionId = params.get('session') || 'default';
 
   console.log(`[Relay] 新连接接入，Session: ${sessionId}`);
 
-  // 加入房间
-  if (!rooms.has(sessionId)) {
-    rooms.set(sessionId, new Set());
-  }
-  const clients = rooms.get(sessionId);
-  clients.add(ws);
+  const clients = joinRoom(sessionId, ws);
+  const lastSnapshot = getSnapshot(sessionId);
 
-  // 如果有缓存的快照，立即发给新连接
-  const lastSnapshot = snapshots.get(sessionId);
   if (lastSnapshot) {
     ws.send(JSON.stringify(lastSnapshot));
   }
 
   ws.on('message', (data) => {
     try {
-      const message = JSON.parse(data.toString());
+      const message = JSON.parse(data.toString()) as SyncMessage;
 
-      // 如果是场景快照，存入缓存
       if (message.type === 'scene_snapshot') {
-        snapshots.set(sessionId, message);
+        rememberSnapshot(sessionId, message as SceneSnapshotMessage);
       }
 
-      // 广播给房间内的其它所有人
       const payload = JSON.stringify(message);
-      clients.forEach((client) => {
-        if (client !== ws && client.readyState === 1 /* OPEN */) {
+      clients.forEach((client: WebSocket) => {
+        if (client !== ws && client.readyState === WebSocket.OPEN) {
           client.send(payload);
         }
       });
-    } catch (e) {
+    } catch {
       // 忽略非 JSON 消息
     }
   });
 
   ws.on('close', () => {
     console.log(`[Relay] 连接关闭，Session: ${sessionId}`);
-    clients.delete(ws);
-    if (clients.size === 0) {
-      rooms.delete(sessionId);
-      // 可选：房间没人了是否清理快照？通常建议保留一段时间
-    }
+    leaveRoom(sessionId, ws);
   });
 
   ws.on('error', (err) => {

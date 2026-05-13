@@ -1,4 +1,4 @@
-import type { SceneInstance } from '../scene';
+import type { SceneInstance } from '../scene/index.js';
 
 export type SyncLockOwner = 'phone' | 'desktop';
 

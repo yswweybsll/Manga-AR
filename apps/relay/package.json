@@ -2,13 +2,20 @@
   "name": "@manga-ar/relay",
   "version": "1.0.0",
   "private": true,
-  "main": "src/server.js",
+  "type": "module",
+  "main": "src/server.ts",
   "scripts": {
-    "start": "node src/server.js",
-    "typecheck": "node --check src/server.js"
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@manga-ar/shared": "workspace:*",
     "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.2"
   }
 }

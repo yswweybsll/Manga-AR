@@ -1,4 +1,4 @@
-import type { ModelAssetRef } from '../models';
+import type { ModelAssetRef } from '../models/index.js';
 
 export type SceneTransform = {
   x: number;

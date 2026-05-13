@@ -1,14 +1,14 @@
 export type {
   ModelAssetRef,
   ModelFormat,
-} from './models';
+} from './models/index.js';
 
 export type {
   SavedSceneDocument,
   SavedSceneModelInstance,
   SceneInstance,
   SceneTransform,
-} from './scene';
+} from './scene/index.js';
 
 export type {
   InstanceDeleteMessage,
@@ -23,4 +23,4 @@ export type {
   SyncMessageType,
   SyncModelInstance,
   SyncServiceConfig,
-} from './sync';
+} from './sync/index.js';
