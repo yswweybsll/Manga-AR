@@ -42,3 +42,9 @@ yarn-error.*
 
 # Gradle user home when set to project dir (local build cache — do not commit)
 .gradle-cache/
+
+# agents
+
+.codex
+.claude
+.opencode
