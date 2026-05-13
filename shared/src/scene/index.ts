@@ -30,3 +30,5 @@ export type SavedSceneDocument = {
   pendingModelId: string | null;
   instances: SavedSceneModelInstance[];
 };
+
+export type SceneDocument = SavedSceneDocument;

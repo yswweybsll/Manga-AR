@@ -6,6 +6,7 @@ export type {
 export type {
   SavedSceneDocument,
   SavedSceneModelInstance,
+  SceneDocument,
   SceneInstance,
   SceneTransform,
 } from './scene/index.js';
