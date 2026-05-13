@@ -39,6 +39,14 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+/apps/mobile/ios
+/apps/mobile/android
+
+# build outputs
+/apps/studio-desktop/dist
+/apps/studio-desktop/dist-electron
+/apps/relay/dist
+/shared/dist
 
 # Gradle user home when set to project dir (local build cache — do not commit)
 .gradle-cache/
