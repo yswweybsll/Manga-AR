@@ -1,6 +1,6 @@
 # Manga AR
 
-基于 Expo（React Native）与 `@reactvision/react-viro` 的 AR 应用；仓库内还包含 WebSocket 中继服务与电脑端调试页面。
+Manga AR 是一个 pnpm workspace monorepo。当前包含 Expo React Native 手机端、Node WebSocket 中继服务、Electron 桌面端骨架，以及顶层 `shared` 共享类型包。
 
 ## 环境要求
 
@@ -10,39 +10,43 @@
 
 ## 安装依赖
 
-在项目根目录：
+在项目根目录安装全部 workspace 依赖：
 
 ```bash
-pnpm install
-```
-
-中继服务（可选，本地联调时使用）：
-
-```bash
-cd relay-server
 pnpm install
 ```
 
 ## 开发运行
 
+手机端：
+
 ```bash
 pnpm start
+# 或
+pnpm --filter @manga-ar/mobile start
 ```
 
-上述命令等价于 `expo start --dev-client`，需配合 **Development Build（开发客户端）** 使用：手机上安装的是你自己打包出来的 dev client，而不是 Expo Go。
-
-安装到设备 / 模拟器（会先按需编译原生工程）：
+安装到设备 / 模拟器：
 
 ```bash
 pnpm run android
-# 或
 pnpm run ios
 ```
 
-Web 预览（若业务支持）：
+中继服务：
 
 ```bash
-pnpm run web
+pnpm run relay
+# 或
+pnpm --filter @manga-ar/relay start
+```
+
+桌面端骨架：
+
+```bash
+pnpm run studio
+# 或
+pnpm --filter @manga-ar/studio-desktop dev
 ```
 
 ## 原生工程（prebuild）
@@ -78,26 +82,17 @@ pnpm run android:release
 pnpm run android:install-release
 ```
 
-## 中继服务 relay-server
+## 中继服务 relay
 
-用于手机与电脑端页面之间的 WebSocket 中继（与 `manga-ar-studio` 等配合）。
+用于手机与电脑端页面之间的 WebSocket 中继。
 
 ```bash
-cd relay-server
-node index.js
+pnpm run relay
 ```
-
-默认端口等逻辑见 `relay-server/index.js`，可按需修改。
 
 ## Manga AR Studio（电脑端页面）
 
-`manga-ar-studio/index.html` 为静态页面，可用浏览器直接打开；若页面内请求受浏览器跨域限制，可在该目录下用任意静态服务器访问，例如：
-
-```bash
-npx --yes serve manga-ar-studio -p 5173
-```
-
-将页面里的 Relay 地址改为实际运行的 `ws://` 地址即可。
+桌面端骨架由 `pnpm run studio` 启动；迁移后的静态原型位于 `apps/studio-desktop/prototype/index.html`。
 
 ## 说明
 

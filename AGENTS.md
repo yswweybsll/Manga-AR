@@ -2,18 +2,18 @@
 
 ## Project Structure & Module Organization
 
-Manga AR is an Expo React Native app using TypeScript and `@reactvision/react-viro`. The app entry points are `index.ts` and `App.tsx`. Feature code lives under `src/`: `screens/` for UI flows, `scenes/` for AR placement scenes, `services/` for caching, storage, and sync logic, `api/` for model data access, `types/` for shared TypeScript contracts, and `mock/` for local model fixtures. Static app assets are in `assets/`. `relay-server/` contains the Node WebSocket relay, and `manga-ar-studio/index.html` is the desktop studio page.
+Manga AR is a pnpm workspace monorepo. `apps/mobile` contains the Expo React Native app using TypeScript and `@reactvision/react-viro`; its entry points are `apps/mobile/index.ts` and `apps/mobile/App.tsx`. `apps/relay` contains the Node WebSocket relay. `apps/studio-desktop` contains the Electron desktop Studio skeleton and the migrated static prototype under `apps/studio-desktop/prototype`. `shared` contains platform-neutral TypeScript contracts consumed by mobile, relay, and desktop.
 
 ## Build, Test, and Development Commands
 
-Install root dependencies with `pnpm install`; install relay dependencies separately with `cd relay-server && pnpm install`.
-
-- `pnpm start`: starts Expo with the development client.
-- `pnpm run android` / `pnpm run ios`: builds and runs the native app on a device or simulator.
-- `pnpm run web`: starts Expo web preview when supported.
-- `pnpm run prebuild` or `pnpm run prebuild:android`: regenerates native project files.
-- `pnpm run android:release`: builds the Android release APK after prebuild.
-- `cd relay-server && node index.js`: starts the WebSocket relay on `PORT` or `3001`.
+- `pnpm install`: installs all workspace dependencies from the repository root.
+- `pnpm start`: starts the Expo mobile app through the root forwarding script.
+- `pnpm --filter @manga-ar/mobile start`: starts Expo directly from the mobile workspace.
+- `pnpm run android` / `pnpm run ios`: builds and runs the native mobile app on a device or simulator.
+- `pnpm run relay`: starts the WebSocket relay on `PORT` or `3001`.
+- `pnpm run studio`: starts the desktop Studio renderer dev server.
+- `pnpm run typecheck`: runs TypeScript checks for shared, mobile, relay, and desktop.
+- `pnpm run check:structure`: verifies the workspace dependency boundaries.
 
 ## Coding Style & Naming Conventions
 
@@ -21,7 +21,7 @@ Use strict TypeScript for app code. Follow the existing React Native style: func
 
 ## Testing Guidelines
 
-No automated test script is currently defined. Before submitting changes, run TypeScript checks with `npx tsc --noEmit` when dependencies are installed, and manually exercise the affected flow with `pnpm start` or the relevant native command. For relay changes, test `node relay-server/index.js` and verify `/studio` plus WebSocket session behavior.
+Before submitting structural changes, run `pnpm run check:structure` and `pnpm run typecheck`. For mobile changes, also manually exercise the affected flow with `pnpm start` or the relevant native command. For relay changes, test `pnpm run relay` and verify `/studio` plus WebSocket session behavior.
 
 ## Commit & Pull Request Guidelines
 
