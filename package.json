@@ -1,33 +1,24 @@
 {
-  "name": "manga-ar",
+  "name": "manga-ar-workspace",
   "version": "1.0.0",
-  "main": "index.ts",
+  "private": true,
   "scripts": {
-    "start": "expo start --dev-client",
-    "android": "expo run:android",
-    "android:release": "cd android && gradlew.bat assembleRelease",
-    "android:install-release": "cd android && gradlew.bat installRelease",
-    "ios": "expo run:ios",
-    "web": "expo start --web",
-    "prebuild": "expo prebuild --clean",
-    "prebuild:android": "expo prebuild --clean -p android"
+    "start": "pnpm --filter @manga-ar/mobile start",
+    "android": "pnpm --filter @manga-ar/mobile android",
+    "android:release": "pnpm --filter @manga-ar/mobile android:release",
+    "android:install-release": "pnpm --filter @manga-ar/mobile android:install-release",
+    "ios": "pnpm --filter @manga-ar/mobile ios",
+    "web": "pnpm --filter @manga-ar/mobile web",
+    "prebuild": "pnpm --filter @manga-ar/mobile prebuild",
+    "prebuild:android": "pnpm --filter @manga-ar/mobile prebuild:android",
+    "relay": "pnpm --filter @manga-ar/relay start",
+    "studio": "pnpm --filter @manga-ar/studio-desktop dev",
+    "typecheck": "pnpm --filter @manga-ar/shared typecheck && pnpm --filter @manga-ar/mobile typecheck && pnpm --filter @manga-ar/relay typecheck && pnpm --filter @manga-ar/studio-desktop typecheck",
+    "check:structure": "node scripts/check-workspace-structure.mjs"
   },
-  "dependencies": {
-    "@reactvision/react-viro": "^2.53.1",
-    "expo": "~54.0.10",
-    "expo-file-system": "~19.0.21",
-    "expo-media-library": "~18.2.1",
-    "expo-status-bar": "~3.0.9",
-    "expo-system-ui": "~6.0.9",
-    "react": "19.1.0",
-    "react-native": "0.81.5"
-  },
-  "overrides": {
-    "react": "19.1.0"
-  },
-  "devDependencies": {
-    "@types/react": "~19.1.10",
-    "typescript": "~5.9.2"
-  },
-  "private": true
+  "pnpm": {
+    "overrides": {
+      "react": "19.1.0"
+    }
+  }
 }
