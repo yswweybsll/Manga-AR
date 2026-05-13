@@ -96,7 +96,7 @@ export function ARPlacementScreen({
         setInstances((current) =>
           current.map((item) =>
             item.instanceId === remoteInstance.instanceId
-              ? { ...item, ...remoteInstance } // 用电脑端的精调数据覆盖本地
+              ? { ...item, ...remoteInstance, asset: item.asset } // 保留本地缓存资产，仅同步位姿与锁状态
               : item
           )
         );

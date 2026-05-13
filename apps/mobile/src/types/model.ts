@@ -1,30 +1,13 @@
-export type ModelFormat = 'GLB' | 'GLTF' | 'OBJ' | 'VRX';
+import type { ModelAssetRef, ModelFormat, SceneInstance } from '@manga-ar/shared';
 
-export type RemoteModel = {
-  id: string;
-  name: string;
-  thumbnailUrl?: string;
-  modelUrl: string;
-  format: ModelFormat;
-  defaultScale?: number;
-  width?: number;
-  height?: number;
-  depth?: number;
-  surfaceOffset?: number;
-};
+export type { ModelAssetRef, ModelFormat };
 
-export type CachedModelAsset = RemoteModel & {
+export type RemoteModel = ModelAssetRef;
+
+export type CachedModelAsset = ModelAssetRef & {
   localUri: string;
 };
 
-export type SceneModelInstance = {
-  instanceId: string;
+export type SceneModelInstance = Omit<SceneInstance, 'asset'> & {
   asset: CachedModelAsset;
-  /** World-space XZ (meters), AR anchor coordinates */
-  x: number;
-  z: number;
-  /** World-space Y of model center (meters) */
-  y: number;
-  rotationY: number;
-  scaleValue: number;
 };
