@@ -63,7 +63,7 @@ pnpm run prebuild
 pnpm run prebuild:android
 ```
 
-`prebuild` 会执行 `expo prebuild --clean`，生成干净的 `android/`、`ios/`。之后即可使用下面的 Gradle 打包命令。
+`prebuild` 会执行 `expo prebuild --clean`，生成干净的 `android/`、`ios/`。项目已注册本地 Expo config plugin，用于修正 `@reactvision/react-viro` 在 monorepo 下生成的 Android 依赖路径。协作者只要正常跑 `prebuild` 就能得到可构建的原生工程。
 
 ## Android 打包（Release APK）
 
