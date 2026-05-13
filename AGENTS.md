@@ -6,13 +6,13 @@ Manga AR is an Expo React Native app using TypeScript and `@reactvision/react-vi
 
 ## Build, Test, and Development Commands
 
-Install root dependencies with `npm install`; install relay dependencies separately with `cd relay-server && npm install`.
+Install root dependencies with `pnpm install`; install relay dependencies separately with `cd relay-server && pnpm install`.
 
-- `npm start`: starts Expo with the development client.
-- `npm run android` / `npm run ios`: builds and runs the native app on a device or simulator.
-- `npm run web`: starts Expo web preview when supported.
-- `npm run prebuild` or `npm run prebuild:android`: regenerates native project files.
-- `npm run android:release`: builds the Android release APK after prebuild.
+- `pnpm start`: starts Expo with the development client.
+- `pnpm run android` / `pnpm run ios`: builds and runs the native app on a device or simulator.
+- `pnpm run web`: starts Expo web preview when supported.
+- `pnpm run prebuild` or `pnpm run prebuild:android`: regenerates native project files.
+- `pnpm run android:release`: builds the Android release APK after prebuild.
 - `cd relay-server && node index.js`: starts the WebSocket relay on `PORT` or `3001`.
 
 ## Coding Style & Naming Conventions
@@ -21,7 +21,7 @@ Use strict TypeScript for app code. Follow the existing React Native style: func
 
 ## Testing Guidelines
 
-No automated test script is currently defined. Before submitting changes, run TypeScript checks with `npx tsc --noEmit` when dependencies are installed, and manually exercise the affected flow with `npm start` or the relevant native command. For relay changes, test `node relay-server/index.js` and verify `/studio` plus WebSocket session behavior.
+No automated test script is currently defined. Before submitting changes, run TypeScript checks with `npx tsc --noEmit` when dependencies are installed, and manually exercise the affected flow with `pnpm start` or the relevant native command. For relay changes, test `node relay-server/index.js` and verify `/studio` plus WebSocket session behavior.
 
 ## Commit & Pull Request Guidelines
 

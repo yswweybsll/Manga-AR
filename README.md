@@ -13,20 +13,20 @@
 在项目根目录：
 
 ```bash
-npm install
+pnpm install
 ```
 
 中继服务（可选，本地联调时使用）：
 
 ```bash
 cd relay-server
-npm install
+pnpm install
 ```
 
 ## 开发运行
 
 ```bash
-npm start
+pnpm start
 ```
 
 上述命令等价于 `expo start --dev-client`，需配合 **Development Build（开发客户端）** 使用：手机上安装的是你自己打包出来的 dev client，而不是 Expo Go。
@@ -34,15 +34,15 @@ npm start
 安装到设备 / 模拟器（会先按需编译原生工程）：
 
 ```bash
-npm run android
+pnpm run android
 # 或
-npm run ios
+pnpm run ios
 ```
 
 Web 预览（若业务支持）：
 
 ```bash
-npm run web
+pnpm run web
 ```
 
 ## 原生工程（prebuild）
@@ -50,24 +50,24 @@ npm run web
 本仓库默认 **不把 `android/`、`ios/` 提交到 Git**（见 `.gitignore`）。首次在本机打包或运行原生命令前，需要生成原生目录：
 
 ```bash
-npm run prebuild
+pnpm run prebuild
 ```
 
 仅 Android：
 
 ```bash
-npm run prebuild:android
+pnpm run prebuild:android
 ```
 
 `prebuild` 会执行 `expo prebuild --clean`，生成干净的 `android/`、`ios/`。之后即可使用下面的 Gradle 打包命令。
 
 ## Android 打包（Release APK）
 
-1. 已完成 `npm run prebuild:android`（或 `npm run prebuild`），确保存在 `android/` 目录。
+1. 已完成 `pnpm run prebuild:android`（或 `pnpm run prebuild`），确保存在 `android/` 目录。
 2. 在项目根目录执行：
 
 ```bash
-npm run android:release
+pnpm run android:release
 ```
 
 等价于在 `android` 目录执行 `gradlew.bat assembleRelease`（Windows）。生成的 APK 位于 `android/app/build/outputs/apk/release/`（具体子路径以 Gradle 输出为准）。
@@ -75,7 +75,7 @@ npm run android:release
 安装 Release 到已连接设备：
 
 ```bash
-npm run android:install-release
+pnpm run android:install-release
 ```
 
 ## 中继服务 relay-server
