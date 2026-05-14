@@ -49,3 +49,5 @@ yarn-error.*
 .claude
 .opencode
 .cursor
+.agents
+skills-lock.json
