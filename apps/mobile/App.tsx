@@ -1,12 +1,33 @@
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, StyleSheet, View } from 'react-native';
+import {
+  MD3DarkTheme,
+  PaperProvider,
+  type MD3Theme,
+} from 'react-native-paper';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { fetchModels } from './src/api/models';
 import { ARPlacementScreen } from './src/screens/ARPlacementScreen';
 import { ModelLibraryScreen } from './src/screens/ModelLibraryScreen';
 import { cacheModelAsset } from './src/services/modelCache';
 import type { CachedModelAsset, RemoteModel } from './src/types/model';
+
+const appTheme: MD3Theme = {
+  ...MD3DarkTheme,
+  roundness: 3,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: '#7dd3fc',
+    secondary: '#c4b5fd',
+    tertiary: '#fda4af',
+    background: '#09090b',
+    surface: '#111318',
+    surfaceVariant: '#1f2430',
+    outline: '#3f3f46',
+  },
+};
 
 export default function App() {
   const [models, setModels] = useState<RemoteModel[]>([]);
@@ -55,26 +76,30 @@ export default function App() {
   }, []);
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <SafeAreaProvider>
+      <PaperProvider theme={appTheme}>
+        <View style={styles.container}>
+          <StatusBar style="light" />
 
-      {selectedModel ? (
-        <ARPlacementScreen
-          initialModel={selectedModel}
-          availableModels={models}
-          onBack={handleBackToLibrary}
-        />
-      ) : (
-        <ModelLibraryScreen
-          models={models}
-          loading={loadingModels}
-          error={modelsError}
-          preparingModelId={preparingModelId}
-          onRetry={loadModels}
-          onSelectModel={handleSelectModel}
-        />
-      )}
-    </View>
+          {selectedModel ? (
+            <ARPlacementScreen
+              initialModel={selectedModel}
+              availableModels={models}
+              onBack={handleBackToLibrary}
+            />
+          ) : (
+            <ModelLibraryScreen
+              models={models}
+              loading={loadingModels}
+              error={modelsError}
+              preparingModelId={preparingModelId}
+              onRetry={loadModels}
+              onSelectModel={handleSelectModel}
+            />
+          )}
+        </View>
+      </PaperProvider>
+    </SafeAreaProvider>
   );
 }
 
