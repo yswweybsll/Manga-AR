@@ -7,5 +7,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["electron/**/*.ts", "src/main/**/*.ts"]
+  "include": ["electron/**/*.ts", "src/main/**/*.ts", "../../tests/studio-host/**/*.ts"]
 }

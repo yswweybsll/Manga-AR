@@ -12,6 +12,7 @@
     "prebuild": "pnpm --filter @manga-ar/mobile prebuild",
     "prebuild:android": "pnpm --filter @manga-ar/mobile prebuild:android",
     "studio": "pnpm --filter @manga-ar/studio-desktop dev",
+    "test:studio-host": "pnpm --filter @manga-ar/studio-desktop test:host",
     "typecheck": "pnpm --filter @manga-ar/shared typecheck && pnpm --filter @manga-ar/mobile typecheck && pnpm --filter @manga-ar/studio-desktop typecheck",
     "check:structure": "node scripts/check-workspace-structure.mjs",
     "test:viro-android-plugin": "node scripts/test-viro-android-plugin.mjs"
