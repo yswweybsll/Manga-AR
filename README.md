@@ -103,3 +103,10 @@ npx --yes serve manga-ar-studio -p 5173
 
 - 若使用 **EAS Build** 等云端打包，需在项目中自行添加 `eas.json` 并登录 Expo 账号；当前脚本以 **本地 prebuild + Gradle** 为主。
 - Android **包名** 等在 `app.json` 的 `expo.android.package` 等处配置，修改后建议重新执行 `prebuild` 再打包。
+
+## Agent Skills
+
+运行以下指令安装 skills：
+
+- `pnpm dlx skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices --skill vercel-react-native-skills --skill vercel-react-view-transitions -a codex -a cursor --copy -y`
+- `pnpm dlx skills add shadcn/ui -a codex -a cursor --copy -y`
