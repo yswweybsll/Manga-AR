@@ -207,6 +207,7 @@ test('host_snapshot keeps pending ops until explicit accept or reject events res
     assets: [],
   });
 
+  assert.equal(ws.sent.length, 1);
   assert.deepEqual(client.getPendingOps().map((op) => op.opId), ['op-1']);
   assert.deepEqual(snapshots, [document]);
   assert.equal(latestDraft().lastSnapshot.revision, 2);

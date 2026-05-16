@@ -63,3 +63,16 @@ test('accepts downloaded asset when file size and sha256 checksum match', async 
     'memory://document/host-assets/asset-1-1-asset.glb',
   ]);
 });
+
+test('replaces corrupt cached asset during the same sync call', async () => {
+  const endpoint = { address: '127.0.0.1', port: 19100 };
+  const state = globalThis as unknown as ExpoFileSystemState;
+  const path = 'memory://document/host-assets/asset-1-1-asset.glb';
+  state.__expoFileSystemFiles.set(path, new TextEncoder().encode('bad cache!!'));
+  state.__expoFileSystemDownloads['http://127.0.0.1:19100/assets/asset-1/file'] = 'hello world';
+
+  const synced = await syncSceneAssets(endpoint, [assetRecord()]);
+
+  assert.equal(synced['asset-1'].localUri, path);
+  assert.equal(new TextDecoder().decode(state.__expoFileSystemFiles.get(path)), 'hello world');
+});

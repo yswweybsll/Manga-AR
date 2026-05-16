@@ -181,7 +181,6 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
   function handleSnapshot(message: HostSnapshotMessage): void {
     currentDocument = message.document;
     rememberDraft();
-    flushPendingOps();
     snapshotHandlers.forEach((handler) => handler(message));
   }
 

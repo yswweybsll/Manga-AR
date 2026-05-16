@@ -121,17 +121,22 @@ async function downloadAsset(endpoint: HostEndpoint, asset: AssetRecord, target:
   }
 }
 
-async function ensureAssetFileIntegrity(asset: AssetRecord, target: File): Promise<void> {
+async function hasAssetFileIntegrity(asset: AssetRecord, target: File): Promise<boolean> {
   if (!target.exists || target.size !== asset.fileSize) {
-    removeAssetFileIfExists(target);
-    throw new Error(`同步资产大小不匹配: ${asset.assetId} (${asset.fileName})`);
+    return false;
   }
 
   const checksum = sha256Hex(await target.bytes());
-  if (checksum.toLowerCase() !== asset.checksum.toLowerCase()) {
-    removeAssetFileIfExists(target);
-    throw new Error(`同步资产校验失败: ${asset.assetId} (${asset.fileName})`);
+  return checksum.toLowerCase() === asset.checksum.toLowerCase();
+}
+
+async function ensureAssetFileIntegrity(asset: AssetRecord, target: File): Promise<void> {
+  if (await hasAssetFileIntegrity(asset, target)) {
+    return;
   }
+
+  removeAssetFileIfExists(target);
+  throw new Error(`同步资产校验失败: ${asset.assetId} (${asset.fileName})`);
 }
 
 export async function syncSceneAssets(
@@ -145,6 +150,9 @@ export async function syncSceneAssets(
   for (let index = 0; index < assets.length; index += 1) {
     const asset = assets[index];
     const target = localAssetFile(asset);
+    if (target.exists && !(await hasAssetFileIntegrity(asset, target))) {
+      target.delete();
+    }
     if (!target.exists) {
       await downloadAsset(endpoint, asset, target);
     }
