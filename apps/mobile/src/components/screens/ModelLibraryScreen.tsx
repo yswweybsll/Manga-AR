@@ -10,7 +10,7 @@ import {
   View,
 } from 'react-native';
 
-import type { RemoteModel } from '../types/model';
+import type { RemoteModel } from '../../types/model';
 
 type ModelLibraryScreenProps = {
   models: RemoteModel[];

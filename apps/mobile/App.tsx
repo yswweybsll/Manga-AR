@@ -9,8 +9,8 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { fetchModels } from './src/api/models';
-import { ARPlacementScreen } from './src/screens/ARPlacementScreen';
-import { ModelLibraryScreen } from './src/screens/ModelLibraryScreen';
+import { ARPlacementScreen } from './src/components/screens/ARPlacementScreen';
+import { ModelLibraryScreen } from './src/components/screens/ModelLibraryScreen';
 import { cacheModelAsset } from './src/services/modelCache';
 import type { CachedModelAsset, RemoteModel } from './src/types/model';
 

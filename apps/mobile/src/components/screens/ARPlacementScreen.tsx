@@ -18,20 +18,20 @@ import {
 import { ViroARSceneNavigator } from '@reactvision/react-viro';
 
 import { ModelPlacementScene, getSurfaceOffset } from '../scenes/ModelPlacementScene';
-import { cacheModelAsset } from '../services/modelCache';
 import {
   buildSavedSceneDocument,
   loadRecentScene,
   saveRecentScene,
-} from '../services/sceneStorage';
+} from '../../services/sceneStorage';
 import {
   createSyncService,
   destroySharedSyncService,
   initSharedSyncService,
-} from '../services/syncService';
-import type { CachedModelAsset, RemoteModel, SceneModelInstance } from '../types/model';
-import type { SavedSceneDocument } from '../types/scene';
-import type { SyncConnectionStatus, SyncMessage, SyncServiceConfig } from '../types/sync';
+} from '../../services/syncService';
+import type { CachedModelAsset, RemoteModel, SceneModelInstance } from '../../types/model';
+import type { SavedSceneDocument } from '../../types/scene';
+import type { SyncConnectionStatus, SyncMessage, SyncServiceConfig } from '../../types/sync';
+import { cacheModelAsset } from '../../services/modelCache';
  
 type ARPlacementScreenProps = {
   // retried-success

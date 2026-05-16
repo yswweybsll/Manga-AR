@@ -10,9 +10,9 @@ import {
   ViroText,
 } from '@reactvision/react-viro';
 
-import type { CachedModelAsset, SceneModelInstance } from '../types/model';
+import type { CachedModelAsset, SceneModelInstance } from '../../types/model';
 
-const aimPng = require('../../assets/aim.png');
+const aimPng = require('../../../assets/aim.png');
 
 type HitTransform = {
   position?: number[];
