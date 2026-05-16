@@ -106,7 +106,4 @@ npx --yes serve manga-ar-studio -p 5173
 
 ## Agent Skills
 
-运行以下指令安装 skills：
-
-- `pnpm dlx skills add https://github.com/vercel-labs/agent-skills --skill vercel-react-best-practices --skill vercel-react-native-skills --skill vercel-react-view-transitions -a codex -a cursor --copy -y`
-- `pnpm dlx skills add shadcn/ui -a codex -a cursor --copy -y`
+运行 `scripts/install-agent-skills.ps1` 安装项目用到的 skills 。
