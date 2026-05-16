@@ -36,6 +36,16 @@ Use strict TypeScript for app code. Follow the existing React Native style in mo
 
 Keep user-facing Chinese copy consistent with nearby UI text. Existing comments in mobile sync and AR files are Chinese; keep related comments Chinese while preserving technical identifiers such as `SyncService`, `SceneSnapshotMessage`, and `@reactvision/react-viro`.
 
+## UI Libraries And React Skills
+
+- Desktop React UI work uses `shadcn/ui`. Before creating, modifying, debugging, or reviewing `shadcn/ui` components or related composition in `apps/studio-desktop`, always invoke the `shadcn` skill and follow its workflow.
+- Mobile React Native UI work uses `react-native-paper`. Before implementing or refactoring Paper-based UI in `apps/mobile`, consult the official LLM index at `https://github.com/callstack/react-native-paper/blob/main/docs/static/llms.txt`, then use the linked guides and component docs instead of relying on memory.
+- Before writing React code, invoke the applicable Vercel React skill for the target surface:
+  - `vercel-react-best-practices` for desktop/web React and general React performance patterns.
+  - `vercel-react-native-skills` for React Native or Expo code in `apps/mobile`.
+  - `vercel-react-view-transitions` whenever the task involves View Transitions, route/page transitions, shared element transitions, or animated React state changes built on that API.
+- If multiple React skills apply, use the minimal combination that matches the task, and prefer checking the relevant skill before editing code.
+
 ## Mobile AR Implementation Notes
 
 `ARPlacementScreen` owns most current mobile AR behavior: model selection, placement at the aim point, dragging, joystick movement and rotation, scale/height adjustment, multi-select, recent-scene save/restore, screenshot/video capture, and optional WebSocket sync. Keep large UI changes localized and check that overlay panels remain usable on small screens.
