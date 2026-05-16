@@ -22,6 +22,7 @@ Manga AR is a pnpm workspace monorepo with packages declared in `pnpm-workspace.
 - `pnpm run android:install-release`: installs the generated Android release build on a connected device.
 - `pnpm run studio`: starts the Studio Vite renderer dev server on `127.0.0.1`.
 - `pnpm --filter @manga-ar/studio-desktop build`: builds the Studio Vite app.
+- `pnpm run test:studio-host`: runs Studio desktop host tests from the repository-root `tests/studio-host` folder.
 - `pnpm run typecheck`: runs TypeScript checks for shared, mobile, and desktop.
 - `pnpm run check:structure`: verifies required package paths and shared-package dependency boundaries.
 - `pnpm run test:viro-android-plugin`: tests the local Viro Android monorepo config plugin.
@@ -58,6 +59,14 @@ Scene persistence uses `sceneStorage`, and asset downloads use `modelCache`. Pre
 
 ## Testing Guidelines
 
+For mobile, desktop, shared-contract, host, and cross-package feature work or bug fixes, add focused automated tests with the change. Keep tests under the repository-root `tests/` folder, not beside production files. Organize them by subsystem, for example `tests/mobile`, `tests/studio-host`, `tests/studio-renderer`, and `tests/shared`.
+
+Studio host tests currently live in `tests/studio-host` and should be run with:
+
+```bash
+pnpm run test:studio-host
+```
+
 Before submitting structural or shared-contract changes, run:
 
 ```bash
@@ -72,7 +81,7 @@ pnpm run test:viro-android-plugin
 pnpm run prebuild:android
 ```
 
-For mobile AR changes, manually exercise the affected flow through `pnpm start` or `pnpm run android`, especially placement, model switching, capture, save/restore, and sync status if touched. For Studio renderer changes, run `pnpm run studio` and the Studio package typecheck.
+For mobile AR changes, manually exercise the affected flow through `pnpm start` or `pnpm run android`, especially placement, model switching, capture, save/restore, and sync status if touched. For Studio renderer changes, run `pnpm run studio` and the Studio package typecheck. `pnpm run studio` starts a long-running Vite dev server; when using it as an automated verification command, start it in the background, confirm the log reaches Vite ready, then stop the process. If port 5173 is occupied, Vite may choose another local port such as 5174.
 
 ## Commit & Pull Request Guidelines
 
