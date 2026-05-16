@@ -10,6 +10,34 @@
 
 ---
 
+## 实现说明
+
+完成日期：2026-05-17。
+
+本阶段已在当前工作区完成并通过验收。实现范围包括 mobile host HTTP client、host discovery 服务边界、场景资产同步、scene draft 本地持久化、WebSocket scene sync client、HostDiscovery/ScenePicker/AssetSync 三个移动端界面，以及 `App.tsx` 的 host 加入流程接入。
+
+实际实现相对初版计划做了以下必要加固：
+
+- `assetSyncService` 不再只按文件存在判断缓存命中，而是对 host manifest 派生的本地文件名做 path segment 清洗，校验文件大小和 desktop host 生成的 SHA-256 checksum；缓存损坏时会在同一次同步中删除并重新下载。
+- `sceneDraftStore` 对 `sceneId` 做安全文件名派生，并在读取 draft 时容忍空文件、损坏 JSON 和错误 shape；`sceneId` 与 `lastSnapshot.sceneId` 不匹配时返回 `null`。
+- `sceneSyncClient` 会在连接前读取本地 draft，合并 draft pending ops 与连接前/连接期间新提交的 ops；`host_snapshot` 不再清空 pending ops，pending 只由 `op_accepted` / `op_rejected` 解析；入站 WebSocket 消息做 sceneId 和基础 shape 校验，避免错场景或 malformed payload 污染本地 draft。
+- `AssetSyncScreen` 会校验 manifest 覆盖 `scene.assetRefs` 与 `document.instances[].asset`，缺失必需资产时不会进入 ready 状态。
+- `App.tsx` 在资产同步完成后使用明确的“共享场景已同步”临时占位页，显示 scene name、revision 和同步资产数量，并提供返回场景列表入口；下一阶段再替换为正式 `ARSceneScreen`。
+- 新增 `pnpm run test:mobile`，覆盖 scene sync draft/replay/pending 行为和 asset checksum/cache 行为。
+
+当前已知验收缺口：
+
+- 自动 mDNS/Bonjour 发现尚未完成。`discoveryService.discover()` 当前返回空数组，并保留手动 IP/端口连接入口；这项仍需后续接入 React Native 可用的 mDNS/Bonjour native module 后才能通过手动联调验收。
+
+已通过验证：
+
+```bash
+pnpm run test:mobile
+pnpm --filter @manga-ar/mobile typecheck
+pnpm run check:structure
+pnpm run typecheck
+```
+
 ## Precondition
 
 先完成：
@@ -32,7 +60,7 @@
 **Files:**
 - Create: `apps/mobile/src/services/hostApi.ts`
 
-- [ ] **Step 1: 新增 hostApi**
+- [x] **Step 1: 新增 hostApi**
 
 新增 `apps/mobile/src/services/hostApi.ts`：
 
@@ -108,7 +136,7 @@ export function syncWebSocketUrl(endpoint: HostEndpoint, sceneId: string): strin
 }
 ```
 
-- [ ] **Step 2: 运行 mobile typecheck**
+- [x] **Step 2: 运行 mobile typecheck**
 
 Run:
 
@@ -118,7 +146,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/services/hostApi.ts
@@ -130,7 +158,7 @@ git commit -m "feat(mobile): 添加 desktop host HTTP 客户端"
 **Files:**
 - Create: `apps/mobile/src/services/discoveryService.ts`
 
-- [ ] **Step 1: 新增简化发现服务**
+- [x] **Step 1: 新增简化发现服务**
 
 第一版先提供统一 discovery 接口，并保留手动连接作为调试入口。正式 mDNS/Bonjour 自动发现仍是本功能的验收目标；如果当前 React Native 环境缺少可用 mDNS native module，执行者必须在本任务记录阻塞原因，并在最终总结中把“自动发现未完成”列为未通过验收项。
 
@@ -164,7 +192,7 @@ export function createDiscoveryService(): DiscoveryService {
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -174,7 +202,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/services/discoveryService.ts
@@ -186,7 +214,7 @@ git commit -m "feat(mobile): 添加 host 发现服务边界"
 **Files:**
 - Create: `apps/mobile/src/services/assetSyncService.ts`
 
-- [ ] **Step 1: 新增资产同步服务**
+- [x] **Step 1: 新增资产同步服务**
 
 新增 `apps/mobile/src/services/assetSyncService.ts`：
 
@@ -238,7 +266,7 @@ export async function syncSceneAssets(
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -248,7 +276,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/services/assetSyncService.ts
@@ -260,7 +288,7 @@ git commit -m "feat(mobile): 添加场景资产同步服务"
 **Files:**
 - Create: `apps/mobile/src/services/sceneDraftStore.ts`
 
-- [ ] **Step 1: 新增 draft store**
+- [x] **Step 1: 新增 draft store**
 
 新增 `apps/mobile/src/services/sceneDraftStore.ts`：
 
@@ -310,7 +338,7 @@ export async function loadSceneDraft(sceneId: string): Promise<SceneDraft | null
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -320,7 +348,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/services/sceneDraftStore.ts
@@ -332,7 +360,7 @@ git commit -m "feat(mobile): 添加共享场景 draft 存储"
 **Files:**
 - Create: `apps/mobile/src/services/sceneSyncClient.ts`
 
-- [ ] **Step 1: 新增同步客户端**
+- [x] **Step 1: 新增同步客户端**
 
 新增 `apps/mobile/src/services/sceneSyncClient.ts`：
 
@@ -490,7 +518,7 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -500,7 +528,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/services/sceneSyncClient.ts
@@ -512,7 +540,7 @@ git commit -m "feat(mobile): 添加共享场景同步客户端"
 **Files:**
 - Create: `apps/mobile/src/components/screens/HostDiscoveryScreen.tsx`
 
-- [ ] **Step 1: 新增 HostDiscoveryScreen**
+- [x] **Step 1: 新增 HostDiscoveryScreen**
 
 新增 `apps/mobile/src/components/screens/HostDiscoveryScreen.tsx`：
 
@@ -598,7 +626,7 @@ export function HostDiscoveryScreen({ onSelectHost }: HostDiscoveryScreenProps) 
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -608,7 +636,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/src/components/screens/HostDiscoveryScreen.tsx
@@ -621,7 +649,7 @@ git commit -m "feat(mobile): 添加 Studio 主机发现界面"
 - Create: `apps/mobile/src/components/screens/ScenePickerScreen.tsx`
 - Create: `apps/mobile/src/components/screens/AssetSyncScreen.tsx`
 
-- [ ] **Step 1: 新增 ScenePickerScreen**
+- [x] **Step 1: 新增 ScenePickerScreen**
 
 新增 `apps/mobile/src/components/screens/ScenePickerScreen.tsx`：
 
@@ -683,7 +711,7 @@ export function ScenePickerScreen({ host, onBack, onSelectScene }: ScenePickerSc
 }
 ```
 
-- [ ] **Step 2: 新增 AssetSyncScreen**
+- [x] **Step 2: 新增 AssetSyncScreen**
 
 新增 `apps/mobile/src/components/screens/AssetSyncScreen.tsx`：
 
@@ -750,7 +778,7 @@ export function AssetSyncScreen({ host, scene, onBack, onReady }: AssetSyncScree
 }
 ```
 
-- [ ] **Step 3: 运行 typecheck**
+- [x] **Step 3: 运行 typecheck**
 
 Run:
 
@@ -760,7 +788,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/mobile/src/components/screens/ScenePickerScreen.tsx apps/mobile/src/components/screens/AssetSyncScreen.tsx
@@ -772,7 +800,7 @@ git commit -m "feat(mobile): 添加场景选择与资产同步界面"
 **Files:**
 - Modify: `apps/mobile/App.tsx`
 
-- [ ] **Step 1: 替换 App flow**
+- [x] **Step 1: 替换 App flow**
 
 把 `apps/mobile/App.tsx` 改为保留 PaperProvider，但主流程改为：
 
@@ -862,7 +890,7 @@ const styles = StyleSheet.create({
 
 这是临时占位：下一阶段用 `ARSceneScreen` 替换 joined 后的 `ModelLibraryScreen`。
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -872,7 +900,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/mobile/App.tsx
@@ -884,7 +912,7 @@ git commit -m "feat(mobile): 接入 host 场景加入流程"
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: 运行 mobile typecheck**
+- [x] **Step 1: 运行 mobile typecheck**
 
 Run:
 
@@ -894,7 +922,7 @@ pnpm --filter @manga-ar/mobile typecheck
 
 Expected: PASS。
 
-- [ ] **Step 2: 运行根验证**
+- [x] **Step 2: 运行根验证**
 
 Run:
 
