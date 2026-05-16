@@ -1,49 +1,57 @@
-import type { SceneInstance } from '../scene/index.js';
+import type { AssetRecord } from '../models/index.js';
+import type { Revision, SceneDocument, SceneOp } from '../scene/index.js';
+import type { ClientRole } from '../host/index.js';
 
-export type SyncLockOwner = 'phone' | 'desktop';
+export type SyncConnectionStatus =
+  | 'disconnected'
+  | 'discovering'
+  | 'connecting'
+  | 'connected'
+  | 'syncing'
+  | 'error';
 
-export type SyncModelInstance = SceneInstance & {
-  lockedBy?: SyncLockOwner;
-  syncVersion: number;
+export type HostSnapshotMessage = {
+  type: 'host_snapshot';
+  sceneId: string;
+  timestamp: number;
+  document: SceneDocument;
+  assets: AssetRecord[];
 };
 
-export type SyncMessageType =
-  | 'scene_snapshot'
-  | 'instance_update'
-  | 'instance_delete'
-  | 'lock_acquire'
-  | 'lock_release'
-  | 'ping'
-  | 'pong';
-
-export type SceneSnapshotMessage = {
-  type: 'scene_snapshot';
-  sessionId: string;
+export type ClientOpsMessage = {
+  type: 'client_ops';
+  sceneId: string;
   timestamp: number;
-  instances: SyncModelInstance[];
-  selectedInstanceId: string | null;
+  clientId: string;
+  role: ClientRole;
+  ops: SceneOp[];
 };
 
-export type InstanceUpdateMessage = {
-  type: 'instance_update';
-  sessionId: string;
-  timestamp: number;
-  instance: SyncModelInstance;
+export type HostOpAcceptedEvent = {
+  type: 'op_accepted';
+  opId: string;
+  revision: Revision;
 };
 
-export type InstanceDeleteMessage = {
-  type: 'instance_delete';
-  sessionId: string;
-  timestamp: number;
-  instanceId: string;
+export type HostOpRejectedEvent = {
+  type: 'op_rejected';
+  opId: string;
+  reason: 'stale_revision' | 'missing_instance' | 'missing_asset' | 'invalid_op';
+  authoritativeRevision: Revision;
 };
 
-export type LockMessage = {
-  type: 'lock_acquire' | 'lock_release';
-  sessionId: string;
+export type HostSceneChangedEvent = {
+  type: 'scene_changed';
+  sceneId: string;
+  revision: Revision;
+  document: SceneDocument;
+};
+
+export type HostEventMessage = {
+  type: 'host_events';
+  sceneId: string;
   timestamp: number;
-  instanceId: string;
-  owner: SyncLockOwner;
+  events: Array<HostOpAcceptedEvent | HostOpRejectedEvent | HostSceneChangedEvent>;
 };
 
 export type PingMessage = {
@@ -57,23 +65,8 @@ export type PongMessage = {
 };
 
 export type SyncMessage =
-  | SceneSnapshotMessage
-  | InstanceUpdateMessage
-  | InstanceDeleteMessage
-  | LockMessage
+  | HostSnapshotMessage
+  | ClientOpsMessage
+  | HostEventMessage
   | PingMessage
   | PongMessage;
-
-export type SyncConnectionStatus =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'error';
-
-export type SyncServiceConfig = {
-  serverUrl: string;
-  sessionId: string;
-  reconnectIntervalMs?: number;
-  pingIntervalMs?: number;
-  snapshotThrottleMs?: number;
-};

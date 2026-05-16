@@ -1,27 +1,4 @@
-export type {
-  ModelAssetRef,
-  ModelFormat,
-} from './models/index.js';
-
-export type {
-  SavedSceneDocument,
-  SavedSceneModelInstance,
-  SceneDocument,
-  SceneInstance,
-  SceneTransform,
-} from './scene/index.js';
-
-export type {
-  InstanceDeleteMessage,
-  InstanceUpdateMessage,
-  LockMessage,
-  PingMessage,
-  PongMessage,
-  SceneSnapshotMessage,
-  SyncConnectionStatus,
-  SyncLockOwner,
-  SyncMessage,
-  SyncMessageType,
-  SyncModelInstance,
-  SyncServiceConfig,
-} from './sync/index.js';
+export * from './models/index.js';
+export * from './scene/index.js';
+export * from './sync/index.js';
+export * from './host/index.js';
