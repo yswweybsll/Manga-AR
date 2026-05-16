@@ -1,18 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useEffect, useState } from 'react';
-import { Alert, StyleSheet, View } from 'react-native';
+import React, { useCallback, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import {
+  Button,
   MD3DarkTheme,
   PaperProvider,
+  Text,
   type MD3Theme,
 } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { fetchModels } from './src/api/models';
-import { ARPlacementScreen } from './src/components/screens/ARPlacementScreen';
-import { ModelLibraryScreen } from './src/components/screens/ModelLibraryScreen';
-import { cacheModelAsset } from './src/services/modelCache';
-import type { CachedModelAsset, RemoteModel } from './src/types/model';
+import type { DiscoveredHost, SceneRecord, SceneResponse } from '@manga-ar/shared';
+
+import { AssetSyncScreen } from './src/components/screens/AssetSyncScreen';
+import { HostDiscoveryScreen } from './src/components/screens/HostDiscoveryScreen';
+import { ScenePickerScreen } from './src/components/screens/ScenePickerScreen';
+import type { LocalAssetRecord } from './src/services/assetSyncService';
 
 const appTheme: MD3Theme = {
   ...MD3DarkTheme,
@@ -29,50 +32,40 @@ const appTheme: MD3Theme = {
   },
 };
 
+type JoinedScenePayload = {
+  sceneResponse: SceneResponse;
+  assetsById: Record<string, LocalAssetRecord>;
+};
+
 export default function App() {
-  const [models, setModels] = useState<RemoteModel[]>([]);
-  const [loadingModels, setLoadingModels] = useState(true);
-  const [modelsError, setModelsError] = useState<string | null>(null);
-  const [preparingModelId, setPreparingModelId] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<CachedModelAsset | null>(null);
+  const [host, setHost] = useState<DiscoveredHost | null>(null);
+  const [scene, setScene] = useState<SceneRecord | null>(null);
+  const [joinedScene, setJoinedScene] = useState<JoinedScenePayload | null>(null);
 
-  const loadModels = useCallback(async () => {
-    setLoadingModels(true);
-    setModelsError(null);
-
-    try {
-      const nextModels = await fetchModels();
-      setModels(nextModels);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '未知错误，请稍后重试。';
-      setModelsError(message);
-    } finally {
-      setLoadingModels(false);
-    }
+  const handleSelectHost = useCallback((nextHost: DiscoveredHost) => {
+    setHost(nextHost);
+    setScene(null);
+    setJoinedScene(null);
   }, []);
 
-  useEffect(() => {
-    void loadModels();
-  }, [loadModels]);
-
-  const handleSelectModel = useCallback(async (model: RemoteModel) => {
-    setPreparingModelId(model.id);
-
-    try {
-      const cachedModel = await cacheModelAsset(model);
-      setSelectedModel(cachedModel);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : '模型下载失败，请稍后重试。';
-      Alert.alert('模型加载失败', message);
-    } finally {
-      setPreparingModelId(null);
-    }
+  const handleBackToHosts = useCallback(() => {
+    setHost(null);
+    setScene(null);
+    setJoinedScene(null);
   }, []);
 
-  const handleBackToLibrary = useCallback(() => {
-    setSelectedModel(null);
+  const handleSelectScene = useCallback((nextScene: SceneRecord) => {
+    setScene(nextScene);
+    setJoinedScene(null);
+  }, []);
+
+  const handleBackToScenes = useCallback(() => {
+    setScene(null);
+    setJoinedScene(null);
+  }, []);
+
+  const handleJoinedSceneReady = useCallback((payload: JoinedScenePayload) => {
+    setJoinedScene(payload);
   }, []);
 
   return (
@@ -81,22 +74,49 @@ export default function App() {
         <View style={styles.container}>
           <StatusBar style="light" />
 
-          {selectedModel ? (
-            <ARPlacementScreen
-              initialModel={selectedModel}
-              availableModels={models}
-              onBack={handleBackToLibrary}
+          {!host ? (
+            <HostDiscoveryScreen onSelectHost={handleSelectHost} />
+          ) : null}
+
+          {host && !scene ? (
+            <ScenePickerScreen
+              host={host}
+              onBack={handleBackToHosts}
+              onSelectScene={handleSelectScene}
             />
-          ) : (
-            <ModelLibraryScreen
-              models={models}
-              loading={loadingModels}
-              error={modelsError}
-              preparingModelId={preparingModelId}
-              onRetry={loadModels}
-              onSelectModel={handleSelectModel}
+          ) : null}
+
+          {host && scene && !joinedScene ? (
+            <AssetSyncScreen
+              host={host}
+              scene={scene}
+              onBack={handleBackToScenes}
+              onReady={handleJoinedSceneReady}
             />
-          )}
+          ) : null}
+
+          {joinedScene ? (
+            <View style={styles.readyContainer}>
+              <Text variant="headlineMedium" style={styles.readyTitle}>
+                共享场景已同步
+              </Text>
+              <Text variant="titleMedium" style={styles.readySceneName} numberOfLines={2}>
+                {joinedScene.sceneResponse.scene.name}
+              </Text>
+              <Text variant="bodyMedium" style={styles.readyMeta}>
+                revision {joinedScene.sceneResponse.scene.revision}
+              </Text>
+              <Text variant="bodyMedium" style={styles.readyMeta}>
+                已同步资产：{Object.keys(joinedScene.assetsById).length}
+              </Text>
+              <Text variant="bodyMedium" style={styles.readyDescription}>
+                AR 场景将在下一阶段接入。
+              </Text>
+              <Button mode="contained" onPress={handleBackToScenes} style={styles.readyButton}>
+                返回场景列表
+              </Button>
+            </View>
+          ) : null}
         </View>
       </PaperProvider>
     </SafeAreaProvider>
@@ -107,5 +127,31 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#09090b',
+  },
+  readyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  readyTitle: {
+    color: '#fafafa',
+    fontWeight: '700',
+  },
+  readySceneName: {
+    marginTop: 12,
+    color: '#d4d4d8',
+    fontWeight: '700',
+  },
+  readyMeta: {
+    marginTop: 8,
+    color: '#a1a1aa',
+  },
+  readyDescription: {
+    marginTop: 20,
+    color: '#d4d4d8',
+    lineHeight: 20,
+  },
+  readyButton: {
+    marginTop: 24,
   },
 });
