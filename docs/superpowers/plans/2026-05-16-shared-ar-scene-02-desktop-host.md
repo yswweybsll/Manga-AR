@@ -24,7 +24,7 @@
 - Modify: `apps/studio-desktop/package.json`
 - Modify: `pnpm-lock.yaml`
 
-- [ ] **Step 1: 添加依赖**
+- [x] **Step 1: 添加依赖**
 
 Run:
 
@@ -35,7 +35,7 @@ pnpm --filter @manga-ar/studio-desktop add -D @types/ws
 
 Expected: `apps/studio-desktop/package.json` 增加 `ws`、`bonjour-service` 和 `@types/ws`。
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -45,7 +45,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/studio-desktop/package.json pnpm-lock.yaml
@@ -57,7 +57,7 @@ git commit -m "build(studio): 添加内置 host 运行时依赖"
 **Files:**
 - Create: `apps/studio-desktop/electron/main/host/sceneRepository.ts`
 
-- [ ] **Step 1: 创建文件**
+- [x] **Step 1: 创建文件**
 
 新增 `apps/studio-desktop/electron/main/host/sceneRepository.ts`：
 
@@ -295,7 +295,7 @@ export class SceneRepository {
 }
 ```
 
-- [ ] **Step 2: 运行 desktop typecheck**
+- [x] **Step 2: 运行 desktop typecheck**
 
 Run:
 
@@ -305,7 +305,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/host/sceneRepository.ts
@@ -317,7 +317,7 @@ git commit -m "feat(studio): 添加场景仓库"
 **Files:**
 - Create: `apps/studio-desktop/electron/main/host/assetRepository.ts`
 
-- [ ] **Step 1: 创建文件**
+- [x] **Step 1: 创建文件**
 
 新增 `apps/studio-desktop/electron/main/host/assetRepository.ts`：
 
@@ -431,7 +431,7 @@ export class AssetRepository {
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck**
+- [x] **Step 2: 运行 typecheck**
 
 Run:
 
@@ -441,7 +441,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/host/assetRepository.ts
@@ -454,7 +454,7 @@ git commit -m "feat(studio): 添加资产仓库"
 - Create: `apps/studio-desktop/electron/main/host/httpRoutes.ts`
 - Create: `apps/studio-desktop/electron/main/host/hostServer.ts`
 
-- [ ] **Step 1: 创建 httpRoutes**
+- [x] **Step 1: 创建 httpRoutes**
 
 新增 `apps/studio-desktop/electron/main/host/httpRoutes.ts`：
 
@@ -565,7 +565,7 @@ export async function handleHostHttpRequest(
 }
 ```
 
-- [ ] **Step 2: 创建 hostServer**
+- [x] **Step 2: 创建 hostServer**
 
 新增 `apps/studio-desktop/electron/main/host/hostServer.ts`：
 
@@ -694,7 +694,7 @@ export class HostServer {
 }
 ```
 
-- [ ] **Step 3: 运行 typecheck**
+- [x] **Step 3: 运行 typecheck**
 
 Run:
 
@@ -704,7 +704,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/host/httpRoutes.ts apps/studio-desktop/electron/main/host/hostServer.ts
@@ -718,7 +718,7 @@ git commit -m "feat(studio): 添加内置 host HTTP 服务"
 - Modify: `apps/studio-desktop/electron/main/host/hostServer.ts`
 - Modify: `apps/studio-desktop/electron/main/host/httpRoutes.ts`
 
-- [ ] **Step 1: 创建 wsSessions**
+- [x] **Step 1: 创建 wsSessions**
 
 新增 `apps/studio-desktop/electron/main/host/wsSessions.ts`：
 
@@ -864,7 +864,7 @@ export class WsSessions {
 }
 ```
 
-- [ ] **Step 2: 在 HostServer 中挂载 WsSessions**
+- [x] **Step 2: 在 HostServer 中挂载 WsSessions**
 
 在 `hostServer.ts` 中导入：
 
@@ -895,7 +895,7 @@ this.wsSessions?.close();
 this.wsSessions = null;
 ```
 
-- [ ] **Step 3: 运行 typecheck**
+- [x] **Step 3: 运行 typecheck**
 
 Run:
 
@@ -905,7 +905,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/host/wsSessions.ts apps/studio-desktop/electron/main/host/hostServer.ts
@@ -918,7 +918,7 @@ git commit -m "feat(studio): 添加场景 WebSocket 同步会话"
 - Create: `apps/studio-desktop/electron/main/host/discoveryService.ts`
 - Modify: `apps/studio-desktop/electron/main/host/hostServer.ts`
 
-- [ ] **Step 1: 创建 discovery service**
+- [x] **Step 1: 创建 discovery service**
 
 新增 `apps/studio-desktop/electron/main/host/discoveryService.ts`：
 
@@ -954,7 +954,7 @@ export class DiscoveryService {
 }
 ```
 
-- [ ] **Step 2: 在 HostServer 中启动 discovery**
+- [x] **Step 2: 在 HostServer 中启动 discovery**
 
 在 `hostServer.ts` 导入：
 
@@ -980,7 +980,7 @@ this.discoveryService.start(this.hostInfo);
 this.discoveryService.stop();
 ```
 
-- [ ] **Step 3: 运行 typecheck**
+- [x] **Step 3: 运行 typecheck**
 
 Run:
 
@@ -990,7 +990,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/host/discoveryService.ts apps/studio-desktop/electron/main/host/hostServer.ts
@@ -1004,7 +1004,7 @@ git commit -m "feat(studio): 广播局域网 host 发现服务"
 - Modify: `apps/studio-desktop/electron/preload/index.ts`
 - Create: `apps/studio-desktop/src/renderer/types/preload.d.ts`
 
-- [ ] **Step 1: 在 main process 启动 HostServer**
+- [x] **Step 1: 在 main process 启动 HostServer**
 
 在 `apps/studio-desktop/electron/main/index.ts` 添加：
 
@@ -1048,7 +1048,7 @@ app.on('before-quit', () => {
 });
 ```
 
-- [ ] **Step 2: 在 preload 暴露 host API**
+- [x] **Step 2: 在 preload 暴露 host API**
 
 把 `apps/studio-desktop/electron/preload/index.ts` 改为：
 
@@ -1063,7 +1063,7 @@ contextBridge.exposeInMainWorld('mangaArStudio', {
 });
 ```
 
-- [ ] **Step 3: 添加 renderer 类型声明**
+- [x] **Step 3: 添加 renderer 类型声明**
 
 新增 `apps/studio-desktop/src/renderer/types/preload.d.ts`。不要从 `electron/main` 导入类型，避免 renderer build 解析 main process 文件：
 
@@ -1094,7 +1094,7 @@ declare global {
 export {};
 ```
 
-- [ ] **Step 4: 运行 typecheck**
+- [x] **Step 4: 运行 typecheck**
 
 Run:
 
@@ -1104,7 +1104,7 @@ pnpm --filter @manga-ar/studio-desktop typecheck
 
 Expected: PASS。
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/studio-desktop/electron/main/index.ts apps/studio-desktop/electron/preload/index.ts apps/studio-desktop/src/renderer/types/preload.d.ts
@@ -1116,7 +1116,7 @@ git commit -m "feat(studio): 启动内置 host 服务"
 **Files:**
 - Modify: `apps/studio-desktop/src/renderer/App.tsx`
 
-- [ ] **Step 1: 使用 shadcn Button 与 host state**
+- [x] **Step 1: 使用 shadcn Button 与 host state**
 
 把 `apps/studio-desktop/src/renderer/App.tsx` 改为：
 
@@ -1173,7 +1173,7 @@ export function App() {
 }
 ```
 
-- [ ] **Step 2: 运行 typecheck 与 build**
+- [x] **Step 2: 运行 typecheck 与 build**
 
 Run:
 
@@ -1184,7 +1184,7 @@ pnpm --filter @manga-ar/studio-desktop build
 
 Expected: PASS。
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/studio-desktop/src/renderer/App.tsx
@@ -1196,7 +1196,7 @@ git commit -m "feat(studio): 显示内置 host 状态"
 **Files:**
 - Verify only.
 
-- [ ] **Step 1: 运行 desktop 验证**
+- [x] **Step 1: 运行 desktop 验证**
 
 Run:
 
@@ -1207,7 +1207,7 @@ pnpm --filter @manga-ar/studio-desktop build
 
 Expected: PASS。
 
-- [ ] **Step 2: 运行仓库验证**
+- [x] **Step 2: 运行仓库验证**
 
 Run:
 
@@ -1218,7 +1218,7 @@ pnpm run typecheck
 
 Expected: PASS。
 
-- [ ] **Step 3: 手动启动 Studio**
+- [x] **Step 3: 手动启动 Studio**
 
 Run:
 
@@ -1227,3 +1227,80 @@ pnpm run studio
 ```
 
 Expected: Vite dev server 启动。当前 `pnpm run studio` 只启动 renderer dev server，不启动 Electron main process；本阶段验收以 `typecheck` 和 `build` 为准。若本阶段新增 Electron dev runner，必须在同一任务内更新 `apps/studio-desktop/package.json`、README 和本验收步骤。
+
+---
+
+## 实现记录
+
+本阶段已完成并提交，当前实现以 `apps/studio-desktop` 的 Electron main process 作为唯一 desktop host：
+
+- `apps/studio-desktop/package.json` 已增加 `ws`、`bonjour-service` 和 `@types/ws`。
+- `apps/studio-desktop/electron/main/host/sceneRepository.ts` 负责本地 JSON 场景库，支持创建默认 marker 场景、列出场景、读取场景，以及按 `SceneOp` 应用 add/update/delete/replace/select 操作并维护 revision。
+- `apps/studio-desktop/electron/main/host/assetRepository.ts` 负责本地资产 manifest 与文件导入，按文件扩展名识别 `GLB`、`GLTF`、`OBJ`、`VRX`，并提供资产文件路径用于 HTTP 下载。
+- `apps/studio-desktop/electron/main/host/httpRoutes.ts` 提供 `/host/info`、`/scenes`、`/scenes/:sceneId`、`/scenes/:sceneId/assets`、`/scenes/:sceneId/ops` 和 `/assets/:assetId/file`。
+- `apps/studio-desktop/electron/main/host/hostServer.ts` 组合 scene repository、asset repository、HTTP server、WebSocket sessions 和 discovery service；启动后会创建默认共享场景。
+- `apps/studio-desktop/electron/main/host/wsSessions.ts` 提供 `/sync?sceneId=...` WebSocket 同步入口，连接后下发 `host_snapshot`，接收 `client_ops` 后广播 `host_events`。
+- `apps/studio-desktop/electron/main/host/discoveryService.ts` 使用 `bonjour-service` 发布 `_manga-ar-studio` 风格的局域网发现信息；后续为了测试稳定性，已支持注入 `createBonjour` fake，默认运行路径仍使用真实 `new Bonjour()`。
+- `apps/studio-desktop/electron/main/index.ts` 在 Electron ready 后启动 `HostServer`，并通过 `ipcMain.handle('host:get-state')` 向 preload 暴露 host 状态。
+- `apps/studio-desktop/electron/preload/index.ts` 暴露 `window.mangaArStudio.host.getState()`。
+- `apps/studio-desktop/src/renderer/types/preload.d.ts` 为 renderer 提供 preload API 类型声明，避免 renderer build 解析 Electron main process 类型。
+- `apps/studio-desktop/src/renderer/App.tsx` 显示 host 运行状态、端口和局域网地址，并提供刷新按钮。
+
+相关提交：
+
+- `0dbc3b0 build(studio): 添加内置 host 运行时依赖`
+- `0bc8ec5 feat(studio): 添加场景仓库`
+- `db27e34 feat(studio): 添加资产仓库`
+- `b75fe56 feat(studio): 添加内置 host HTTP 服务`
+- `6af5d5f feat(studio): 添加场景 WebSocket 同步会话`
+- `29b076e feat(studio): 广播局域网 host 发现服务`
+- `0039850 feat(studio): 启动内置 host 服务`
+- `49e2cbc feat(studio): 显示内置 host 状态`
+- `049c8d1 test(studio): 补充内置 host 测试`
+- `eb4fa2d test(studio): 补充内置 host 行为测试`
+
+## 测试覆盖
+
+本阶段测试集中放在仓库根目录 `tests/studio-host`：
+
+- `tests/studio-host/sceneRepository.test.ts` 覆盖默认场景创建、revision 递增、资产引用汇总，以及 stale/missing-instance 拒绝路径。
+- `tests/studio-host/assetRepository.test.ts` 覆盖资产导入、manifest 持久化、content type 推断、版本过滤和文件读取。
+- `tests/studio-host/httpRoutes.test.ts` 覆盖 host info、场景列表、场景文档、场景资产、资产文件下载和 POST scene ops。
+- `tests/studio-host/wsSessions.test.ts` 覆盖缺少 `sceneId` 的 WebSocket 拒绝、连接后 `host_snapshot` 下发，以及 `client_ops` 到 `host_events` 的广播。
+- `tests/studio-host/hostServer.test.ts` 覆盖 `HostServer` 启动状态、默认场景创建、HTTP info、重复 start 幂等和重复 stop。
+- `tests/studio-host/discoveryService.test.ts` 使用 fake Bonjour 覆盖 discovery publish 参数和 stop/destroy 清理。
+
+## 验收记录
+
+最后一次补测后的验证结果：
+
+```bash
+pnpm run test:studio-host
+```
+
+Expected/Actual: PASS，12/12 tests passed。
+
+```bash
+pnpm --filter @manga-ar/studio-desktop typecheck
+```
+
+Expected/Actual: PASS。
+
+```bash
+pnpm run check:structure
+```
+
+Expected/Actual: PASS，`Workspace structure check passed.`。
+
+```bash
+pnpm run typecheck
+```
+
+Expected/Actual: PASS，shared、mobile、studio-desktop typecheck 均通过。
+
+`pnpm run studio` 已做过启动验收，Vite renderer dev server 返回 `HTTP 200`；检查时启动的临时进程已停止。
+
+## 已知边界
+
+- 当前 desktop host WebSocket 协议入口是 `/sync?sceneId=...`，并处理 shared contract 中的 `client_ops`。mobile 现有 `syncService` 仍保留 legacy `?session=...` 和 `scene_snapshot` 推送路径，因此“手机端直接连入 desktop host 完成新协议同步”不属于本阶段完成范围，需要后续 mobile 协议迁移任务承接。
+- `pnpm run studio` 仍只启动 renderer Vite dev server，不启动 Electron main process；本阶段未新增 Electron dev runner。
