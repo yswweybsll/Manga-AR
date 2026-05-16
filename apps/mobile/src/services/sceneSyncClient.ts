@@ -148,6 +148,7 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
   let currentDocument = options.initialDocument;
   let pendingOps: SceneOp[] = [];
   let connectionGeneration = 0;
+  let draftRestoreAttempted = false;
 
   const snapshotHandlers = new Set<(message: HostSnapshotMessage) => void>();
   const eventHandlers = new Set<(message: HostEventMessage) => void>();
@@ -282,12 +283,16 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
     if (generation !== connectionGeneration) {
       return;
     }
+    draftRestoreAttempted = true;
 
     if (draft) {
       currentDocument = draft.lastSnapshot;
       pendingOps = mergePendingOps(draft.pendingOps, pendingOps);
     }
 
+    if (draft || pendingOps.length > 0) {
+      rememberDraft();
+    }
     createSocket(generation);
   }
 
@@ -328,7 +333,9 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
 
     const submittedOps = cloneSceneOps(ops);
     pendingOps = [...pendingOps, ...submittedOps];
-    rememberDraft();
+    if (draftRestoreAttempted) {
+      rememberDraft();
+    }
     sendOps(submittedOps);
   }
 

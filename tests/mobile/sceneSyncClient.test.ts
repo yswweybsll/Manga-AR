@@ -288,6 +288,34 @@ test('connect merges restored draft ops with ops submitted while restore is pend
   assert.deepEqual(sentMessage.ops.map((op) => op.opId), ['op-draft', 'op-new']);
 });
 
+test('connect preserves saved draft ops when ops were submitted before connect', async () => {
+  seedDraft({
+    sceneId: 'scene-1',
+    lastSnapshot: initialDocument(5),
+    pendingOps: [selectOp('op-draft', 5)],
+  });
+  const client = createSceneSyncClient({
+    endpoint: { address: '127.0.0.1', port: 19100 },
+    sceneId: 'scene-1',
+    clientId: 'mobile-a',
+    initialDocument: initialDocument(),
+  });
+
+  client.submitOps([selectOp('op-new')]);
+  client.connect();
+  const ws = await waitForSocket();
+
+  assert.deepEqual(client.getPendingOps().map((op) => op.opId), ['op-draft', 'op-new']);
+
+  ws.open();
+
+  assert.equal(ws.sent.length, 1);
+  const sentMessage = JSON.parse(ws.sent[0]) as SyncMessage;
+  assert.equal(sentMessage.type, 'client_ops');
+  assert.deepEqual(sentMessage.ops.map((op) => op.opId), ['op-draft', 'op-new']);
+  assert.deepEqual(latestDraft().pendingOps.map((op) => op.opId), ['op-draft', 'op-new']);
+});
+
 test('host_events removes accepted pending ops, applies scene_changed, saves draft, and notifies handlers', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
@@ -373,9 +401,9 @@ test('invalid inbound messages set error without mutating pending ops or draft',
   client.onSnapshot((message) => snapshots.push(message.document));
 
   client.submitOps([selectOp('op-1')]);
-  const draftCount = draftWrites().length;
   client.connect();
   const ws = await waitForSocket();
+  const draftCount = draftWrites().length;
   ws.open();
 
   ws.receive({
@@ -414,9 +442,9 @@ test('same-scene host_snapshot with malformed document is rejected without clear
   client.onSnapshot((message) => snapshots.push(message.document));
 
   client.submitOps([selectOp('op-1')]);
-  const draftCount = draftWrites().length;
   client.connect();
   const ws = await waitForSocket();
+  const draftCount = draftWrites().length;
   ws.open();
 
   ws.receive({
@@ -450,9 +478,9 @@ test('same-scene scene_changed with malformed document is rejected without clear
   client.onEvents((message) => events.push(message.events.map((event) => event.type)));
 
   client.submitOps([selectOp('op-1')]);
-  const draftCount = draftWrites().length;
   client.connect();
   const ws = await waitForSocket();
+  const draftCount = draftWrites().length;
   ws.open();
 
   ws.receive({
@@ -504,7 +532,7 @@ test('submitting ops while connected sends only the new ops', async () => {
   assert.deepEqual(secondMessage.ops.map((op) => op.opId), ['op-2']);
 });
 
-test('getPendingOps and submitOps do not share op object references with callers', () => {
+test('getPendingOps and submitOps do not share op object references with callers', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -517,6 +545,8 @@ test('getPendingOps and submitOps do not share op object references with callers
   operation.baseRevision = 99;
   const exposedPending = client.getPendingOps();
   exposedPending[0].baseRevision = 123;
+  client.connect();
+  await waitForSocket();
 
   assert.equal(client.getPendingOps()[0].baseRevision, 0);
   assert.equal(latestDraft().pendingOps[0].baseRevision, 0);
@@ -534,9 +564,11 @@ test('draft save failures set error status without creating unhandled rejection'
   (globalThis as unknown as { __sceneDraftWriteError: boolean }).__sceneDraftWriteError = true;
 
   client.submitOps([selectOp('op-1')]);
+  client.connect();
+  await waitForMicrotask();
   await waitForMicrotask();
 
-  assert.deepEqual(statusChanges, ['error']);
+  assert.deepEqual(statusChanges, ['connecting', 'error']);
 });
 
 test('malformed WebSocket messages set error status without throwing', async () => {
