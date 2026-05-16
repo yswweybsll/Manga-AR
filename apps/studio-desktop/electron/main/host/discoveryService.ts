@@ -1,13 +1,34 @@
 import type { HostInfo } from '@manga-ar/shared';
 import { Bonjour, type Service } from 'bonjour-service';
 
+type BonjourLike = {
+  publish: (options: {
+    name: string;
+    type: string;
+    port: number;
+    txt: {
+      hostId: string;
+      protocolVersion: string;
+      wsPath: string;
+    };
+  }) => ServiceLike;
+  destroy: () => void;
+};
+
+type ServiceLike = Pick<Service, 'stop'>;
+
 export class DiscoveryService {
-  private bonjour: Bonjour | null = null;
-  private service: Service | null = null;
+  private readonly createBonjour: () => BonjourLike;
+  private bonjour: BonjourLike | null = null;
+  private service: ServiceLike | null = null;
+
+  constructor(createBonjour: () => BonjourLike = () => new Bonjour()) {
+    this.createBonjour = createBonjour;
+  }
 
   start(hostInfo: HostInfo): void {
     this.stop();
-    this.bonjour = new Bonjour();
+    this.bonjour = this.createBonjour();
     this.service = this.bonjour.publish({
       name: hostInfo.hostName,
       type: 'manga-ar-studio',
