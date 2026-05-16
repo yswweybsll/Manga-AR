@@ -5,7 +5,6 @@ const root = process.cwd();
 
 const requiredPaths = [
   'apps/mobile/package.json',
-  'apps/relay/package.json',
   'apps/studio-desktop/package.json',
   'shared/package.json',
   'shared/src/index.ts',
@@ -52,7 +51,6 @@ for (const relativePath of requiredPaths) {
 }
 
 assertDependency('apps/mobile/package.json', '@manga-ar/shared');
-assertDependency('apps/relay/package.json', '@manga-ar/shared');
 assertDependency('apps/studio-desktop/package.json', '@manga-ar/shared');
 
 const sharedPkg = readJson('shared/package.json');

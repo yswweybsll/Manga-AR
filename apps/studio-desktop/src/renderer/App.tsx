@@ -1,10 +1,9 @@
 import type { SceneDocument } from '@manga-ar/shared';
 
 const emptyScene: SceneDocument = {
-  id: 'desktop-empty-scene',
-  updatedAt: 0,
+  sceneId: 'desktop-empty-scene',
+  revision: 0,
   selectedInstanceId: null,
-  pendingModelId: null,
   instances: [],
 };
 

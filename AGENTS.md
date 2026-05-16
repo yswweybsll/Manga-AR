@@ -6,8 +6,7 @@ Manga AR is a pnpm workspace monorepo with packages declared in `pnpm-workspace.
 
 - `apps/mobile`: Expo React Native app in TypeScript. Entry points are `index.ts` and `App.tsx`. The app currently loads model metadata from `src/api/models.ts` and `src/mock/models.ts`, caches model assets, opens `ModelLibraryScreen`, then drives AR placement through `ARPlacementScreen` and `scenes/ModelPlacementScene.tsx`.
 - `apps/mobile/plugins/withViroAndroidMonorepoPaths.js`: local Expo config plugin that patches generated Android Gradle settings for `@reactvision/react-viro` in the monorepo layout. Keep this plugin in sync with Viro Android module names.
-- `apps/relay`: Node HTTP and WebSocket relay. `src/server.ts` serves a status page at `/`, serves the migrated static Studio prototype at `/studio`, and relays JSON sync messages by `session` room while remembering the latest scene snapshot.
-- `apps/studio-desktop`: desktop Studio work area. The Vite/React renderer lives under `src/renderer`; Electron main/preload code lives under `electron/`; desktop-domain placeholders live under `src/main`; the migrated static prototype is `prototype/index.html` and is also served by the relay.
+- `apps/studio-desktop`: desktop Studio work area. The Vite/React renderer lives under `src/renderer`; Electron main/preload code lives under `electron/`; desktop-domain placeholders live under `src/main`; the migrated static prototype is `prototype/index.html`.
 - `shared`: platform-neutral TypeScript contracts for model assets, scene documents, and sync messages. It must stay free of Expo, React Native, Electron, Three.js, and `ws` runtime dependencies.
 - `scripts`: repository maintenance scripts, including workspace boundary checks and Viro Android plugin tests.
 
@@ -21,10 +20,9 @@ Manga AR is a pnpm workspace monorepo with packages declared in `pnpm-workspace.
 - `pnpm run prebuild:android`: runs a clean Android-only Expo prebuild.
 - `pnpm run android:release`: builds the generated Android project with `gradlew.bat assembleRelease`.
 - `pnpm run android:install-release`: installs the generated Android release build on a connected device.
-- `pnpm run relay`: starts the relay on `PORT` or `3001`; open `http://localhost:3001/studio` for the relay-served static Studio prototype.
-- `pnpm run studio`: starts the Studio Vite renderer dev server on `127.0.0.1`; this is separate from the relay-served prototype.
+- `pnpm run studio`: starts the Studio Vite renderer dev server on `127.0.0.1`.
 - `pnpm --filter @manga-ar/studio-desktop build`: builds the Studio Vite app.
-- `pnpm run typecheck`: runs TypeScript checks for shared, mobile, relay, and desktop.
+- `pnpm run typecheck`: runs TypeScript checks for shared, mobile, and desktop.
 - `pnpm run check:structure`: verifies required package paths and shared-package dependency boundaries.
 - `pnpm run test:viro-android-plugin`: tests the local Viro Android monorepo config plugin.
 
@@ -54,11 +52,9 @@ Model assets are represented by `RemoteModel` and `CachedModelAsset`. Until a re
 
 Scene persistence uses `sceneStorage`, and asset downloads use `modelCache`. Prefer updating these services over duplicating storage or cache logic inside React components.
 
-## Sync and Relay Notes
+## Sync and Desktop Host Notes
 
-The shared sync contract lives in `shared/src/sync/index.ts`. The mobile `syncService` sends throttled `scene_snapshot` messages, reconnects automatically, and sends ping messages. The relay groups clients by `session` query parameter, broadcasts messages to other clients in the same room, and sends the remembered latest snapshot to newly connected clients.
-
-The default mobile sync config is `ws://127.0.0.1:3001` with session `room1`; real device testing usually needs a LAN IP address instead of localhost. Keep IP addresses and local relay endpoints out of committed source unless they are placeholders.
+共享同步 contract 位于 `shared/src/sync/index.ts` 和 `shared/src/host/index.ts`。产品架构不再包含独立 `apps/relay`；电脑端 Studio 的 Electron main process 是唯一 host，负责场景权威状态、资产分发、局域网发现和 WebSocket 同步。
 
 ## Testing Guidelines
 
@@ -76,7 +72,7 @@ pnpm run test:viro-android-plugin
 pnpm run prebuild:android
 ```
 
-For mobile AR changes, manually exercise the affected flow through `pnpm start` or `pnpm run android`, especially placement, model switching, capture, save/restore, and sync status if touched. For relay changes, run `pnpm run relay`, verify `/` and `/studio`, and test at least two WebSocket clients in the same session when message routing changes. For Studio renderer changes, run `pnpm run studio` and the Studio package typecheck.
+For mobile AR changes, manually exercise the affected flow through `pnpm start` or `pnpm run android`, especially placement, model switching, capture, save/restore, and sync status if touched. For Studio renderer changes, run `pnpm run studio` and the Studio package typecheck.
 
 ## Commit & Pull Request Guidelines
 
@@ -86,6 +82,6 @@ Pull requests should describe the user-visible change, list verification command
 
 ## Security & Configuration Tips
 
-Do not commit generated native folders or build outputs. The repository ignores root `android/` and `ios/`, `apps/mobile/android`, `apps/mobile/ios`, Studio and relay build outputs, and local Gradle cache directories. If generated files are needed for a local build, keep unrelated generated diffs out of the final change.
+Do not commit generated native folders or build outputs. The repository ignores root `android/` and `ios/`, `apps/mobile/android`, `apps/mobile/ios`, Studio build outputs, and local Gradle cache directories. If generated files are needed for a local build, keep unrelated generated diffs out of the final change.
 
-Keep local network relay addresses, device IPs, signing credentials, keystores, provisioning profiles, and `.env*.local` files out of source control. Android package identifiers and native permissions live in `apps/mobile/app.json`; rerun prebuild after changing native configuration.
+Keep local network host addresses, device IPs, signing credentials, keystores, provisioning profiles, and `.env*.local` files out of source control. Android package identifiers and native permissions live in `apps/mobile/app.json`; rerun prebuild after changing native configuration.

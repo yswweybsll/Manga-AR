@@ -1,6 +1,6 @@
 # Manga AR
 
-Manga AR 是一个 pnpm workspace monorepo。当前包含 Expo React Native 手机端、Node WebSocket 中继服务、Electron 桌面端骨架，以及顶层 `shared` 共享类型包。
+Manga AR 是一个 pnpm workspace monorepo。当前包含 Expo React Native 手机端、Electron 桌面端，以及顶层 `shared` 共享类型包。同步主机能力由桌面端 Studio 内建，不再保留独立 relay 应用。
 
 ## 环境要求
 
@@ -31,14 +31,6 @@ pnpm --filter @manga-ar/mobile start
 ```bash
 pnpm run android
 pnpm run ios
-```
-
-中继服务：
-
-```bash
-pnpm run relay
-# 或
-pnpm --filter @manga-ar/relay start
 ```
 
 桌面端骨架：
@@ -80,14 +72,6 @@ pnpm run android:release
 
 ```bash
 pnpm run android:install-release
-```
-
-## 中继服务 relay
-
-用于手机与电脑端页面之间的 WebSocket 中继。
-
-```bash
-pnpm run relay
 ```
 
 ## Manga AR Studio（电脑端页面）
