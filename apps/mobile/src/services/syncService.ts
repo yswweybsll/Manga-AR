@@ -20,10 +20,22 @@ import type { SceneModelInstance } from '../types/model';
 import type {
   SyncConnectionStatus,
   SyncMessage,
-  SyncModelInstance,
   SyncServiceConfig,
-  SceneSnapshotMessage,
 } from '../types/sync';
+
+type LegacySyncModelInstance = SceneModelInstance & {
+  syncVersion: number;
+};
+
+type LegacySceneSnapshotMessage = {
+  type: 'scene_snapshot';
+  sessionId: string;
+  timestamp: number;
+  instances: LegacySyncModelInstance[];
+  selectedInstanceId: string | null;
+};
+
+type OutboundSyncMessage = SyncMessage | LegacySceneSnapshotMessage;
 
 // ─────────────────────────────────────────────
 // 内部工具：节流函数
@@ -65,7 +77,7 @@ function throttle<T extends (...args: Parameters<T>) => void>(
 function toSyncInstance(
   instance: SceneModelInstance,
   versionMap: Map<string, number>
-): SyncModelInstance {
+): LegacySyncModelInstance {
   const version = versionMap.get(instance.instanceId) ?? 0;
   return {
     ...instance,
@@ -131,7 +143,7 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
   }
 
   // ── 发送 JSON 消息 ────────────────────────
-  function send(msg: SyncMessage) {
+  function send(msg: OutboundSyncMessage) {
     if (ws?.readyState === WebSocket.OPEN) {
       try {
         ws.send(JSON.stringify(msg));
@@ -144,7 +156,7 @@ export function createSyncService(config: SyncServiceConfig): SyncService {
   function buildSnapshotMessage(
     instances: SceneModelInstance[],
     selectedInstanceId: string | null
-  ): SceneSnapshotMessage {
+  ): LegacySceneSnapshotMessage {
     instances.forEach((inst) => {
       versionMap.set(
         inst.instanceId,

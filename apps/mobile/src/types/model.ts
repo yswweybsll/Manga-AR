@@ -1,13 +1,28 @@
-import type { ModelAssetRef, ModelFormat, SceneInstance } from '@manga-ar/shared';
+import type { ModelFormat } from '@manga-ar/shared';
 
-export type { ModelAssetRef, ModelFormat };
+export type RemoteModel = {
+  id: string;
+  name: string;
+  thumbnailUrl?: string;
+  modelUrl: string;
+  format: ModelFormat;
+  defaultScale?: number;
+  width?: number;
+  height?: number;
+  depth?: number;
+  surfaceOffset?: number;
+};
 
-export type RemoteModel = ModelAssetRef;
-
-export type CachedModelAsset = ModelAssetRef & {
+export type CachedModelAsset = RemoteModel & {
   localUri: string;
 };
 
-export type SceneModelInstance = Omit<SceneInstance, 'asset'> & {
+export type SceneModelInstance = {
+  instanceId: string;
   asset: CachedModelAsset;
+  x: number;
+  y: number;
+  z: number;
+  rotationY: number;
+  scaleValue: number;
 };
