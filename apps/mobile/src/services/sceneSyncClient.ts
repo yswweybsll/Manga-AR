@@ -41,6 +41,18 @@ function cloneSceneOps(ops: SceneOp[]): SceneOp[] {
   return JSON.parse(JSON.stringify(ops)) as SceneOp[];
 }
 
+function mergePendingOps(draftOps: SceneOp[], currentOps: SceneOp[]): SceneOp[] {
+  const merged = new Map<string, SceneOp>();
+  for (const operation of cloneSceneOps(draftOps)) {
+    merged.set(operation.opId, operation);
+  }
+  for (const operation of cloneSceneOps(currentOps)) {
+    merged.set(operation.opId, operation);
+  }
+
+  return [...merged.values()];
+}
+
 function isSceneDocumentForScene(value: unknown, sceneId: string): value is SceneDocument {
   return (
     isRecord(value) &&
@@ -273,7 +285,7 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
 
     if (draft) {
       currentDocument = draft.lastSnapshot;
-      pendingOps = cloneSceneOps(draft.pendingOps);
+      pendingOps = mergePendingOps(draft.pendingOps, pendingOps);
     }
 
     createSocket(generation);

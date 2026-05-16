@@ -261,6 +261,33 @@ test('connect restores saved draft before opening the socket and replays pending
   assert.equal(sentMessage.ops[0].baseRevision, 5);
 });
 
+test('connect merges restored draft ops with ops submitted while restore is pending', async () => {
+  seedDraft({
+    sceneId: 'scene-1',
+    lastSnapshot: initialDocument(5),
+    pendingOps: [selectOp('op-draft', 5)],
+  });
+  const client = createSceneSyncClient({
+    endpoint: { address: '127.0.0.1', port: 19100 },
+    sceneId: 'scene-1',
+    clientId: 'mobile-a',
+    initialDocument: initialDocument(),
+  });
+
+  client.connect();
+  client.submitOps([selectOp('op-new')]);
+  const ws = await waitForSocket();
+
+  assert.deepEqual(client.getPendingOps().map((op) => op.opId), ['op-draft', 'op-new']);
+
+  ws.open();
+
+  assert.equal(ws.sent.length, 1);
+  const sentMessage = JSON.parse(ws.sent[0]) as SyncMessage;
+  assert.equal(sentMessage.type, 'client_ops');
+  assert.deepEqual(sentMessage.ops.map((op) => op.opId), ['op-draft', 'op-new']);
+});
+
 test('host_events removes accepted pending ops, applies scene_changed, saves draft, and notifies handlers', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
