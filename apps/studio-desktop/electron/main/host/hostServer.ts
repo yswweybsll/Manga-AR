@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { HostInfo } from '@manga-ar/shared';
 
 import { AssetRepository } from './assetRepository.js';
+import { DiscoveryService } from './discoveryService.js';
 import { handleHostHttpRequest } from './httpRoutes.js';
 import { SceneRepository } from './sceneRepository.js';
 import { WsSessions } from './wsSessions.js';
@@ -38,6 +39,7 @@ function getLocalIPv4Addresses(): string[] {
 export class HostServer {
   private readonly sceneRepository: SceneRepository;
   private readonly assetRepository: AssetRepository;
+  private readonly discoveryService = new DiscoveryService();
   private readonly hostId: string;
   private readonly hostName: string;
   private readonly preferredPort: number;
@@ -92,6 +94,7 @@ export class HostServer {
     const address = this.server.address();
     const port = typeof address === 'object' && address ? address.port : this.preferredPort;
     this.hostInfo = { ...this.hostInfo, httpPort: port };
+    this.discoveryService.start(this.hostInfo);
 
     const scenes = await this.sceneRepository.listScenes();
     if (scenes.length === 0) {
@@ -102,6 +105,7 @@ export class HostServer {
   }
 
   async stop(): Promise<void> {
+    this.discoveryService.stop();
     const server = this.server;
     this.server = null;
     if (!server) return;
