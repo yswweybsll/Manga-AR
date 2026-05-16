@@ -7,7 +7,7 @@ import type {
   SyncConnectionStatus,
 } from '@manga-ar/shared';
 import { syncWebSocketUrl, type HostEndpoint } from './hostApi';
-import { saveSceneDraft } from './sceneDraftStore';
+import { loadSceneDraft, saveSceneDraft } from './sceneDraftStore';
 
 export type SceneSyncClientOptions = {
   endpoint: HostEndpoint;
@@ -135,6 +135,7 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
   let status: SyncConnectionStatus = 'disconnected';
   let currentDocument = options.initialDocument;
   let pendingOps: SceneOp[] = [];
+  let connectionGeneration = 0;
 
   const snapshotHandlers = new Set<(message: HostSnapshotMessage) => void>();
   const eventHandlers = new Set<(message: HostEventMessage) => void>();
@@ -179,8 +180,8 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
 
   function handleSnapshot(message: HostSnapshotMessage): void {
     currentDocument = message.document;
-    pendingOps = [];
     rememberDraft();
+    flushPendingOps();
     snapshotHandlers.forEach((handler) => handler(message));
   }
 
@@ -225,7 +226,11 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
     socket.onmessage = null;
   }
 
-  function connect(): void {
+  function createSocket(generation: number): void {
+    if (generation !== connectionGeneration) {
+      return;
+    }
+
     if (ws) {
       const previousSocket = ws;
       detachSocket(previousSocket);
@@ -233,7 +238,6 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
       ws = null;
     }
 
-    setStatus('connecting');
     const socket = new WebSocket(
       syncWebSocketUrl(options.endpoint, options.sceneId)
     ) as SceneSyncWebSocket;
@@ -262,7 +266,41 @@ export function createSceneSyncClient(options: SceneSyncClientOptions): SceneSyn
     socket.onmessage = handleMessage;
   }
 
+  async function openConnection(generation: number): Promise<void> {
+    const draft = await loadSceneDraft(options.sceneId);
+    if (generation !== connectionGeneration) {
+      return;
+    }
+
+    if (draft) {
+      currentDocument = draft.lastSnapshot;
+      pendingOps = cloneSceneOps(draft.pendingOps);
+    }
+
+    createSocket(generation);
+  }
+
+  function connect(): void {
+    connectionGeneration += 1;
+    const generation = connectionGeneration;
+
+    if (ws) {
+      const previousSocket = ws;
+      detachSocket(previousSocket);
+      previousSocket.close();
+      ws = null;
+    }
+
+    setStatus('connecting');
+    void openConnection(generation).catch(() => {
+      if (generation === connectionGeneration) {
+        setStatus('error');
+      }
+    });
+  }
+
   function disconnect(): void {
+    connectionGeneration += 1;
     if (ws) {
       const socket = ws;
       ws = null;

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { SafeAreaView, StyleSheet, View } from 'react-native';
 import { Button, ProgressBar, Text } from 'react-native-paper';
 
-import type { DiscoveredHost, SceneRecord, SceneResponse } from '@manga-ar/shared';
+import type { AssetRecord, DiscoveredHost, ModelAssetRef, SceneRecord, SceneResponse } from '@manga-ar/shared';
 
 import { syncSceneAssets, type LocalAssetRecord } from '../../services/assetSyncService';
 import { fetchScene, fetchSceneAssets } from '../../services/hostApi';
@@ -16,6 +16,32 @@ type AssetSyncScreenProps = {
     assetsById: Record<string, LocalAssetRecord>;
   }) => void;
 };
+
+function assetKey(ref: ModelAssetRef): string {
+  return `${ref.assetId}@${ref.version}`;
+}
+
+function requireManifestAssets(sceneResponse: SceneResponse, manifestAssets: AssetRecord[]): AssetRecord[] {
+  const manifestByKey = new Map(manifestAssets.map((asset) => [assetKey(asset), asset]));
+  const requiredByKey = new Map<string, ModelAssetRef>();
+
+  for (const ref of sceneResponse.scene.assetRefs) {
+    requiredByKey.set(assetKey(ref), ref);
+  }
+
+  for (const instance of sceneResponse.document.instances) {
+    requiredByKey.set(assetKey(instance.asset), instance.asset);
+  }
+
+  return [...requiredByKey.values()].map((ref) => {
+    const asset = manifestByKey.get(assetKey(ref));
+    if (!asset) {
+      throw new Error(`资产清单缺少必需资产: ${ref.assetId}@${ref.version}`);
+    }
+
+    return asset;
+  });
+}
 
 export function AssetSyncScreen({ host, scene, onBack, onReady }: AssetSyncScreenProps) {
   const [progress, setProgress] = useState(0);
@@ -50,8 +76,9 @@ export function AssetSyncScreen({ host, scene, onBack, onReady }: AssetSyncScree
           return;
         }
 
-        setMessage(`需要同步 ${manifest.assets.length} 个资产`);
-        if (manifest.assets.length === 0) {
+        const requiredAssets = requireManifestAssets(sceneResponse, manifest.assets);
+        setMessage(`需要同步 ${requiredAssets.length} 个资产`);
+        if (requiredAssets.length === 0) {
           setProgress(1);
           setMessage('无需同步资产');
           setSyncing(false);
@@ -59,7 +86,7 @@ export function AssetSyncScreen({ host, scene, onBack, onReady }: AssetSyncScree
           return;
         }
 
-        const assetsById = await syncSceneAssets(endpoint, manifest.assets, (completed, total) => {
+        const assetsById = await syncSceneAssets(endpoint, requiredAssets, (completed, total) => {
           if (cancelled) {
             return;
           }
@@ -71,7 +98,7 @@ export function AssetSyncScreen({ host, scene, onBack, onReady }: AssetSyncScree
         }
 
         setProgress(1);
-        setMessage(`已同步 ${manifest.assets.length}/${manifest.assets.length}`);
+        setMessage(`已同步 ${requiredAssets.length}/${requiredAssets.length}`);
         setSyncing(false);
         onReadyRef.current({ sceneResponse, assetsById });
       } catch {

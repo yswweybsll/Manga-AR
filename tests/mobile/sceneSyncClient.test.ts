@@ -66,9 +66,11 @@ function resetDraftWrites(): void {
   const globalState = globalThis as unknown as {
     __sceneDraftWrites: DraftWrite[];
     __sceneDraftWriteError: boolean;
+    __expoFileSystemFiles: Map<string, Uint8Array>;
   };
   globalState.__sceneDraftWrites = [];
   globalState.__sceneDraftWriteError = false;
+  globalState.__expoFileSystemFiles = new Map();
 }
 
 function draftWrites(): DraftWrite[] {
@@ -109,12 +111,46 @@ function waitForMicrotask(): Promise<void> {
   });
 }
 
+async function waitForSocket(): Promise<FakeWebSocket> {
+  await waitForMicrotask();
+  await waitForMicrotask();
+  const socket = FakeWebSocket.instances[0];
+  assert.ok(socket);
+  return socket;
+}
+
+function draftPath(sceneId: string): string {
+  const encodedSceneId = encodeURIComponent(sceneId).replace(/[!'()*.-]/g, (character) =>
+    `%${character.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`,
+  );
+
+  return `memory://document/scene-drafts/${encodedSceneId || '%00'}.json`;
+}
+
+function seedDraft(draft: {
+  sceneId: string;
+  pendingOps: SceneOp[];
+  lastSnapshot: SceneDocument;
+}): void {
+  const files = (globalThis as unknown as { __expoFileSystemFiles: Map<string, Uint8Array> })
+    .__expoFileSystemFiles;
+  files.set(
+    draftPath(draft.sceneId),
+    new TextEncoder().encode(
+      JSON.stringify({
+        ...draft,
+        updatedAt: 123,
+      }),
+    ),
+  );
+}
+
 test.beforeEach(() => {
   installFakeWebSocket();
   resetDraftWrites();
 });
 
-test('queues ops before connect and flushes them on open without exposing pending state', () => {
+test('queues ops before connect and flushes them on open without exposing pending state', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -131,7 +167,7 @@ test('queues ops before connect and flushes them on open without exposing pendin
   exposedPending.length = 0;
 
   client.connect();
-  const ws = FakeWebSocket.instances[0];
+  const ws = await waitForSocket();
   assert.equal(ws.url, 'ws://127.0.0.1:19100/sync?sceneId=scene-1');
 
   ws.open();
@@ -147,7 +183,7 @@ test('queues ops before connect and flushes them on open without exposing pendin
   assert.deepEqual(latestDraft().pendingOps.map((op) => op.opId), ['op-1']);
 });
 
-test('host_snapshot replaces the current document, clears pending ops, saves draft, and notifies handlers', () => {
+test('host_snapshot keeps pending ops until explicit accept or reject events resolve them', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -159,10 +195,11 @@ test('host_snapshot replaces the current document, clears pending ops, saves dra
 
   client.submitOps([selectOp('op-1')]);
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
   const document = initialDocument(2);
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_snapshot',
     sceneId: 'scene-1',
     timestamp: 10,
@@ -170,13 +207,60 @@ test('host_snapshot replaces the current document, clears pending ops, saves dra
     assets: [],
   });
 
-  assert.deepEqual(client.getPendingOps(), []);
+  assert.deepEqual(client.getPendingOps().map((op) => op.opId), ['op-1']);
   assert.deepEqual(snapshots, [document]);
   assert.equal(latestDraft().lastSnapshot.revision, 2);
+  assert.deepEqual(latestDraft().pendingOps.map((op) => op.opId), ['op-1']);
+
+  ws.receive({
+    type: 'host_events',
+    sceneId: 'scene-1',
+    timestamp: 20,
+    events: [
+      {
+        type: 'op_accepted',
+        opId: 'op-1',
+        revision: 3,
+      },
+    ],
+  });
+
+  assert.deepEqual(client.getPendingOps(), []);
   assert.deepEqual(latestDraft().pendingOps, []);
 });
 
-test('host_events removes accepted pending ops, applies scene_changed, saves draft, and notifies handlers', () => {
+test('connect restores saved draft before opening the socket and replays pending ops', async () => {
+  seedDraft({
+    sceneId: 'scene-1',
+    lastSnapshot: initialDocument(5),
+    pendingOps: [selectOp('op-draft', 5)],
+  });
+  const client = createSceneSyncClient({
+    endpoint: { address: '127.0.0.1', port: 19100 },
+    sceneId: 'scene-1',
+    clientId: 'mobile-a',
+    initialDocument: initialDocument(),
+  });
+
+  client.connect();
+  assert.equal(FakeWebSocket.instances.length, 0);
+
+  await waitForMicrotask();
+  await waitForMicrotask();
+
+  const ws = FakeWebSocket.instances[0];
+  assert.deepEqual(client.getPendingOps().map((op) => op.opId), ['op-draft']);
+
+  ws.open();
+
+  assert.equal(ws.sent.length, 1);
+  const sentMessage = JSON.parse(ws.sent[0]) as SyncMessage;
+  assert.equal(sentMessage.type, 'client_ops');
+  assert.deepEqual(sentMessage.ops.map((op) => op.opId), ['op-draft']);
+  assert.equal(sentMessage.ops[0].baseRevision, 5);
+});
+
+test('host_events removes accepted pending ops, applies scene_changed, saves draft, and notifies handlers', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -188,10 +272,11 @@ test('host_events removes accepted pending ops, applies scene_changed, saves dra
 
   client.submitOps([selectOp('op-1'), selectOp('op-2')]);
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
   const document = initialDocument(3);
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_events',
     sceneId: 'scene-1',
     timestamp: 20,
@@ -216,7 +301,7 @@ test('host_events removes accepted pending ops, applies scene_changed, saves dra
   assert.deepEqual(latestDraft().pendingOps.map((op) => op.opId), ['op-2']);
 });
 
-test('host_events removes rejected pending ops so they are not replayed forever', () => {
+test('host_events removes rejected pending ops so they are not replayed forever', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -226,9 +311,10 @@ test('host_events removes rejected pending ops so they are not replayed forever'
 
   client.submitOps([selectOp('op-1'), selectOp('op-2')]);
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_events',
     sceneId: 'scene-1',
     timestamp: 20,
@@ -246,7 +332,7 @@ test('host_events removes rejected pending ops so they are not replayed forever'
   assert.deepEqual(latestDraft().pendingOps.map((op) => op.opId), ['op-2']);
 });
 
-test('invalid inbound messages set error without mutating pending ops or draft', () => {
+test('invalid inbound messages set error without mutating pending ops or draft', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -261,9 +347,10 @@ test('invalid inbound messages set error without mutating pending ops or draft',
   client.submitOps([selectOp('op-1')]);
   const draftCount = draftWrites().length;
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_snapshot',
     sceneId: 'other-scene',
     timestamp: 10,
@@ -273,7 +360,7 @@ test('invalid inbound messages set error without mutating pending ops or draft',
     },
     assets: [],
   });
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_events',
     sceneId: 'scene-1',
     timestamp: 20,
@@ -286,7 +373,7 @@ test('invalid inbound messages set error without mutating pending ops or draft',
   assert.deepEqual(statusChanges, ['connecting', 'connected', 'error', 'error']);
 });
 
-test('same-scene host_snapshot with malformed document is rejected without clearing pending or saving draft', () => {
+test('same-scene host_snapshot with malformed document is rejected without clearing pending or saving draft', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -301,9 +388,10 @@ test('same-scene host_snapshot with malformed document is rejected without clear
   client.submitOps([selectOp('op-1')]);
   const draftCount = draftWrites().length;
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_snapshot',
     sceneId: 'scene-1',
     timestamp: 10,
@@ -321,7 +409,7 @@ test('same-scene host_snapshot with malformed document is rejected without clear
   assert.deepEqual(statusChanges, ['connecting', 'connected', 'error']);
 });
 
-test('same-scene scene_changed with malformed document is rejected without clearing pending or saving draft', () => {
+test('same-scene scene_changed with malformed document is rejected without clearing pending or saving draft', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -336,9 +424,10 @@ test('same-scene scene_changed with malformed document is rejected without clear
   client.submitOps([selectOp('op-1')]);
   const draftCount = draftWrites().length;
   client.connect();
-  FakeWebSocket.instances[0].open();
+  const ws = await waitForSocket();
+  ws.open();
 
-  FakeWebSocket.instances[0].receive({
+  ws.receive({
     type: 'host_events',
     sceneId: 'scene-1',
     timestamp: 20,
@@ -363,7 +452,7 @@ test('same-scene scene_changed with malformed document is rejected without clear
   assert.deepEqual(statusChanges, ['connecting', 'connected', 'error']);
 });
 
-test('submitting ops while connected sends only the new ops', () => {
+test('submitting ops while connected sends only the new ops', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -372,7 +461,7 @@ test('submitting ops while connected sends only the new ops', () => {
   });
 
   client.connect();
-  const ws = FakeWebSocket.instances[0];
+  const ws = await waitForSocket();
   ws.open();
 
   client.submitOps([selectOp('op-1')]);
@@ -422,7 +511,7 @@ test('draft save failures set error status without creating unhandled rejection'
   assert.deepEqual(statusChanges, ['error']);
 });
 
-test('malformed WebSocket messages set error status without throwing', () => {
+test('malformed WebSocket messages set error status without throwing', async () => {
   const client = createSceneSyncClient({
     endpoint: { address: '127.0.0.1', port: 19100 },
     sceneId: 'scene-1',
@@ -433,7 +522,7 @@ test('malformed WebSocket messages set error status without throwing', () => {
   client.onStatusChange((status) => statusChanges.push(status));
 
   client.connect();
-  const ws = FakeWebSocket.instances[0];
+  const ws = await waitForSocket();
 
   assert.doesNotThrow(() => {
     ws.receive('{bad json');
