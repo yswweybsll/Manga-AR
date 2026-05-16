@@ -7,6 +7,7 @@ import type { HostInfo } from '@manga-ar/shared';
 import { AssetRepository } from './assetRepository.js';
 import { handleHostHttpRequest } from './httpRoutes.js';
 import { SceneRepository } from './sceneRepository.js';
+import { WsSessions } from './wsSessions.js';
 
 export type HostServerOptions = {
   hostId: string;
@@ -41,6 +42,7 @@ export class HostServer {
   private readonly hostName: string;
   private readonly preferredPort: number;
   private server: http.Server | null = null;
+  private wsSessions: WsSessions | null = null;
   private hostInfo: HostInfo;
 
   constructor(options: HostServerOptions) {
@@ -77,6 +79,12 @@ export class HostServer {
       });
     });
 
+    this.wsSessions = new WsSessions({
+      server: this.server,
+      sceneRepository: this.sceneRepository,
+      assetRepository: this.assetRepository,
+    });
+
     await new Promise<void>((resolve) => {
       this.server?.listen(this.preferredPort, '0.0.0.0', resolve);
     });
@@ -97,6 +105,8 @@ export class HostServer {
     const server = this.server;
     this.server = null;
     if (!server) return;
+    this.wsSessions?.close();
+    this.wsSessions = null;
     await new Promise<void>((resolve, reject) => {
       server.close((error) => {
         if (error) reject(error);
