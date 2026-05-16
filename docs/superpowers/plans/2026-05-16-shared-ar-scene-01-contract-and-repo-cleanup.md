@@ -25,11 +25,13 @@
 - `shared` 已切换为 desktop host 所需的资产、场景、host 和 sync contract。
 - mobile 暂时保留本地 legacy AR 类型，避免第一阶段连带重构现有 `ARPlacementScreen`。
 - `apps/relay` 已删除，根脚本、结构检查、README 和 AGENTS.md 不再提供独立 relay 入口。
+- 已补清理本地残留的 `apps/relay/node_modules` 目录，并从 `pnpm-lock.yaml` 移除 `apps/relay` importer。
 - `apps/studio-desktop/src/renderer/App.tsx` 的占位 `SceneDocument` 已同步到新 contract，保证根 `typecheck` 通过。
 
 **验证结果:**
 
 - `Test-Path apps\relay` 输出 `False`。
+- `rg -n "apps/relay|@manga-ar/relay" pnpm-lock.yaml` 无命中。
 - `pnpm run check:structure` 通过，输出 `Workspace structure check passed.`。
 - `pnpm run typecheck` 通过，覆盖 shared、mobile 和 studio-desktop。
 
@@ -37,6 +39,7 @@
 
 - Task 3 的 Step 6 实际还需要在 mobile sync 类型中保留 `instance_update` 与 `lock_*` 的 legacy 消息类型，因为 `ARPlacementScreen` 当前仍会消费这些旧 relay 消息。
 - Task 4 的 Step 7 首次运行时发现 desktop 占位场景仍使用旧 `SceneDocument.id/updatedAt/pendingModelId` 字段；已改为 `sceneId/revision/selectedInstanceId/instances` 后通过。
+- 2026-05-17 复核时发现 `apps/relay` 仍因被忽略的 `node_modules/ws` 目录存在，且 `pnpm-lock.yaml` 还保留 `apps/relay` importer；已删除残留目录并刷新 lockfile。`pnpm install --lockfile-only` 曾引入无关 `optional: true` 元数据变更，最终已撤掉，只保留 relay importer 删除。
 
 ## Task 1: 重写 shared 模型与场景类型
 
@@ -649,7 +652,17 @@ rg -n "@manga-ar/relay|pnpm run relay|apps/relay|relay-served|relay 作为正式
 
 Expected: 只允许在历史 spec/plan 中出现“必须删除 relay”的描述；根脚本和当前开发说明不能再指导运行 relay。
 
-- [x] **Step 3: 最终命令**
+- [x] **Step 3: 搜索 lockfile 中的 relay importer 残留**
+
+Run:
+
+```bash
+rg -n "apps/relay|@manga-ar/relay" pnpm-lock.yaml
+```
+
+Expected: 无命中。
+
+- [x] **Step 4: 最终命令**
 
 Run:
 

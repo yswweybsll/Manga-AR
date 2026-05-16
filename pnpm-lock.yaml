@@ -60,28 +60,6 @@ importers:
         specifier: ~5.9.2
         version: 5.9.3
 
-  apps/relay:
-    dependencies:
-      '@manga-ar/shared':
-        specifier: workspace:*
-        version: link:../../shared
-      ws:
-        specifier: ^8.18.0
-        version: 8.20.1
-    devDependencies:
-      '@types/node':
-        specifier: ^24.0.0
-        version: 24.12.4
-      '@types/ws':
-        specifier: ^8.5.13
-        version: 8.18.1
-      tsx:
-        specifier: ^4.19.2
-        version: 4.21.0
-      typescript:
-        specifier: ~5.9.2
-        version: 5.9.3
-
   apps/studio-desktop:
     dependencies:
       '@fontsource-variable/geist':
