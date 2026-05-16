@@ -1,12 +1,14 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
 
+import { HostServer } from './host/hostServer.js';
 import { getDefaultStudioWindowOptions } from '../../src/main/window/index.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+let hostServer: HostServer | null = null;
 
 function createWindow() {
   const options = getDefaultStudioWindowOptions();
@@ -28,7 +30,22 @@ function createWindow() {
   void win.loadFile(path.join(__dirname, '../../dist/index.html'));
 }
 
-app.whenReady().then(createWindow);
+ipcMain.handle('host:get-state', () => {
+  return hostServer?.getState() ?? null;
+});
+
+app.whenReady().then(async () => {
+  hostServer = new HostServer({
+    hostId: `studio-${Date.now()}`,
+    dataDir: path.join(app.getPath('userData'), 'host'),
+  });
+  await hostServer.start();
+  createWindow();
+});
+
+app.on('before-quit', () => {
+  void hostServer?.stop();
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
